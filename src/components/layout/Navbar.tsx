@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Sparkles, BookOpen, Calendar, ShoppingBag, LogOut, User, ChefHat, Settings } from 'lucide-react';
+import { LayoutDashboard, Sparkles, BookOpen, Calendar, ShoppingBag, LogOut, User, ChefHat, Settings, Compass } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import {
@@ -18,9 +18,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 const navItems = [
   { name: 'Home', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Extract', href: '/extract', icon: Sparkles },
+  { name: 'Discover', href: '/discover', icon: Compass },
   { name: 'Recipes', href: '/recipes', icon: BookOpen },
-  { name: 'Meal Plan', href: '/meal-plan', icon: Calendar },
-  { name: 'Shopping List', mobileName: 'Shopping', href: '/shopping-list', icon: ShoppingBag },
+  { name: 'Meal Plan', mobileName: 'Plan', href: '/meal-plan', icon: Calendar },
+  { name: 'Shopping List', mobileName: 'Shop', href: '/shopping-list', icon: ShoppingBag },
 ];
 
 export function Navbar() {
