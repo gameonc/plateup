@@ -10,7 +10,14 @@ const recipeSchema = Schema.object({
     cookTimeMinutes: Schema.integer(),
     servings: Schema.integer(),
     difficulty: Schema.enumString({ enum: ['easy', 'medium', 'hard'] }),
-    tags: Schema.array({ items: Schema.string() }),
+    tags: Schema.array({ 
+      items: Schema.string(),
+      description: "General tags including cuisine, meal type (breakfast, lunch, dinner, snack)." 
+    }),
+    dietaryTags: Schema.array({
+      items: Schema.string(),
+      description: "Applicable dietary tags matching standard taxonomy: 'vegetarian', 'vegan', 'gluten-free', 'dairy-free', 'keto', 'low-carb', 'pescatarian', 'nut-free'."
+    }),
     ingredients: Schema.array({
       items: Schema.object({
         properties: {
@@ -23,7 +30,7 @@ const recipeSchema = Schema.object({
     }),
     instructions: Schema.array({ items: Schema.string() }),
   },
-  optionalProperties: ['description'],
+  optionalProperties: ['description', 'dietaryTags'],
 });
 
 // Create the model configured for recipe JSON output
@@ -55,7 +62,17 @@ Video Description: {description}
 Transcript:
 {transcript}
 
-Extract the complete recipe with accurate ingredient amounts, clear step-by-step instructions, and appropriate tags (cuisine type, meal type, dietary info).`;
+Analyze all ingredients and instructions carefully to accurately populate dietaryTags matching the standard taxonomy:
+- 'vegetarian': contains no meat, poultry, or fish/seafood
+- 'vegan': 100% plant-based; contains no meat, fish, dairy (milk/butter/cheese), eggs, or animal derivatives
+- 'gluten-free': contains no wheat, flour, bread, pasta, barley, rye, or gluten
+- 'dairy-free': contains no milk, cream, butter, cheese, yogurt, or dairy
+- 'keto': high-fat, ultra low-carbohydrate
+- 'low-carb': reduced total carbohydrates
+- 'pescatarian': no meat/poultry, but contains fish/seafood
+- 'nut-free': contains no peanuts or tree nuts (almond, walnut, cashew, pecan, etc.)
+
+Extract the complete recipe with accurate ingredient amounts, clear step-by-step instructions, and appropriate tags and dietaryTags.`;
 
 export const IMAGE_RECIPE_PROMPT = `You are a professional chef and food identifier. Look at this image of food or a restaurant menu item and:
 
@@ -64,7 +81,8 @@ export const IMAGE_RECIPE_PROMPT = `You are a professional chef and food identif
 3. Include precise ingredient measurements
 4. Write clear, step-by-step cooking instructions
 5. Estimate prep time, cook time, servings, and difficulty
-6. Add relevant tags (cuisine type, meal type, dietary info)
+6. Analyze all ingredients and instructions to accurately tag dietary attributes in dietaryTags ('vegetarian', 'vegan', 'gluten-free', 'dairy-free', 'keto', 'low-carb', 'pescatarian', 'nut-free')
+7. Add relevant cuisine and meal tags
 
 If this is a menu, extract the dish name and provide a recipe for it.`;
 

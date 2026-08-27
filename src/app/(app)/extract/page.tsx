@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useRecipes } from '@/hooks/useRecipes';
 import { extractRecipeFromTranscript, extractRecipeFromImage, ExtractedRecipe } from '@/lib/extract-recipe';
 import { RecipePreview } from '@/components/recipe/RecipePreview';
@@ -8,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { toast } from '@/components/ui/toast';
 import { 
   Sparkles, 
   CirclePlay, 
@@ -17,12 +19,16 @@ import {
   ImageIcon, 
   AlertCircle 
 } from 'lucide-react';
-import Image from 'next/image';
 
 const YOUTUBE_REGEX = /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([-\w]{11})/;
 
-export default function ExtractRecipePage() {
+function ExtractRecipeContent() {
   const { addRecipe } = useRecipes();
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get('tab');
+
+  const [selectedTab, setSelectedTab] = useState<'youtube' | 'photo' | null>(null);
+  const activeTab = selectedTab ?? (tabParam === 'photo' ? 'photo' : 'youtube');
   
 
   // YouTube State
@@ -139,6 +145,10 @@ export default function ExtractRecipePage() {
       const base64Data = selectedImage.split(',')[1];
       const mimeType = imageFile.type;
 
+      if (selectedImage) {
+        setThumbnailUrl(selectedImage);
+      }
+
       const recipe = await extractRecipeFromImage(base64Data, mimeType);
       setExtractedRecipe(recipe);
       
@@ -155,24 +165,39 @@ export default function ExtractRecipePage() {
 
     setIsSaving(true);
     try {
+      const finalThumbnailUrl = currentSource === 'youtube'
+        ? thumbnailUrl
+        : (selectedImage || thumbnailUrl || undefined);
+
       await addRecipe({
         name: extractedRecipe.name,
         description: extractedRecipe.description || '',
         source: currentSource || 'youtube',
         sourceUrl: currentSource === 'youtube' ? youtubeUrl : undefined,
-        thumbnailUrl: currentSource === 'youtube' ? thumbnailUrl : undefined,
+        thumbnailUrl: finalThumbnailUrl,
         prepTimeMinutes: extractedRecipe.prepTimeMinutes,
         cookTimeMinutes: extractedRecipe.cookTimeMinutes,
         servings: extractedRecipe.servings,
         difficulty: extractedRecipe.difficulty,
         tags: extractedRecipe.tags,
+        dietaryTags: extractedRecipe.dietaryTags || [],
         ingredients: extractedRecipe.ingredients,
         instructions: extractedRecipe.instructions,
       });
 
       setIsSaved(true);
+      toast.create({
+        title: "Recipe Saved! 📖",
+        description: `"${extractedRecipe.name}" added to your recipes.`,
+        type: "success",
+      });
     } catch (error) {
       console.error("Failed to save recipe:", error);
+      toast.create({
+        title: "Failed to Save",
+        description: "An error occurred while saving the recipe.",
+        type: "error",
+      });
     } finally {
       setIsSaving(false);
     }
@@ -197,7 +222,7 @@ export default function ExtractRecipePage() {
       </div>
 
       {!extractedRecipe ? (
-        <Tabs defaultValue="youtube" className="w-full">
+        <Tabs value={activeTab} onValueChange={(val) => setSelectedTab(val as 'youtube' | 'photo')} className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-8 bg-slate-100 p-1 rounded-xl">
             <TabsTrigger 
               value="youtube" 
@@ -433,5 +458,17 @@ export default function ExtractRecipePage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function ExtractRecipePage() {
+  return (
+    <Suspense fallback={
+      <div className="container max-w-4xl py-8 px-4 sm:px-6 lg:px-8 mx-auto flex items-center justify-center min-h-[40vh]">
+        <Loader2 className="w-8 h-8 animate-spin text-orange-600" />
+      </div>
+    }>
+      <ExtractRecipeContent />
+    </Suspense>
   );
 }

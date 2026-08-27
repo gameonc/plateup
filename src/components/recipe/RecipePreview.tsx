@@ -25,10 +25,19 @@ export function RecipePreview({ recipe, isSaving, isSaved, onSave }: RecipePrevi
             )}
           </div>
         </div>
+        {recipe.dietaryTags && recipe.dietaryTags.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mt-3">
+            {recipe.dietaryTags.map((dTag, index) => (
+              <Badge key={index} variant="secondary" className="bg-emerald-100 text-emerald-800 border-emerald-200 text-xs font-semibold capitalize">
+                🌱 {dTag}
+              </Badge>
+            ))}
+          </div>
+        )}
         {recipe.tags && recipe.tags.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-3">
+          <div className="flex flex-wrap gap-1.5 mt-2">
             {recipe.tags.map((tag, index) => (
-              <Badge key={index} variant="secondary" className="bg-orange-100 text-orange-800 hover:bg-orange-200">
+              <Badge key={index} variant="secondary" className="bg-orange-100 text-orange-800 hover:bg-orange-200 text-xs">
                 {tag}
               </Badge>
             ))}

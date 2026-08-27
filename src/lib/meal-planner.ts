@@ -1,4 +1,4 @@
-import type { Recipe, WeekMeals, DayOfWeek, MealTime, MealSlot, DayMeals } from '@/types';
+import type { Recipe, WeekMeals, DayOfWeek, MealTime, DietaryRestriction } from '@/types';
 
 export const DAYS_OF_WEEK: DayOfWeek[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 export const MEAL_TIMES: MealTime[] = ['breakfast', 'lunch', 'dinner'];
@@ -22,8 +22,10 @@ export function generateMealPlan(
   allRecipes: Recipe[],
   recentRecipeIds: Set<string>,
   lockedSlots: Partial<WeekMeals>,
-  repeatWindowDays: number
+  _repeatWindowDays?: number,
+  dietaryRestrictions?: DietaryRestriction[]
 ): WeekMeals {
+  void _repeatWindowDays;
   const plan = createEmptyWeekMeals();
   
   // Initialize with locked slots
@@ -33,10 +35,27 @@ export function generateMealPlan(
     }
   }
 
-  // Filter out recently cooked recipes
-  let availableRecipes = allRecipes.filter(r => !recentRecipeIds.has(r.id));
+  // 1. Strictly filter candidate recipes by dietary restrictions (R4)
+  let candidateRecipes = allRecipes;
+  if (dietaryRestrictions && dietaryRestrictions.length > 0) {
+    candidateRecipes = allRecipes.filter((recipe) => {
+      const recipeDietTags = [
+        ...(Array.isArray(recipe.dietaryTags) ? recipe.dietaryTags.map((t) => t.toLowerCase()) : []),
+        ...(Array.isArray(recipe.tags) ? recipe.tags.map((t) => t.toLowerCase()) : []),
+      ];
+      return dietaryRestrictions.every((req) => recipeDietTags.includes(req.toLowerCase()));
+    });
+  }
+
+  if (candidateRecipes.length === 0) {
+    // If 0 recipes match the requested dietary restrictions, preserve locked slots and return
+    return plan;
+  }
+
+  // 2. Filter out recently cooked recipes
+  let availableRecipes = candidateRecipes.filter((r) => !recentRecipeIds.has(r.id));
   if (availableRecipes.length === 0) {
-    availableRecipes = allRecipes; // Fallback if all are recently cooked
+    availableRecipes = candidateRecipes; // Fallback to all compliant if all are recently cooked
   }
   if (availableRecipes.length === 0) return plan; // No recipes at all
   
@@ -67,7 +86,7 @@ export function generateMealPlan(
       const group = tagGroups[currentGroupIndex];
       const isWeekend = day === 'saturday' || day === 'sunday';
       
-      let validRecipes = group.filter(r => !excludeIds.has(r.id));
+      const validRecipes = group.filter(r => !excludeIds.has(r.id));
       if (validRecipes.length === 0) {
         currentGroupIndex = (currentGroupIndex + 1) % tagGroups.length;
         attempts++;

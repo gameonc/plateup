@@ -53,6 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         preferences: {
           repeatWindowDays: 5,
           mealsPerDay: ['breakfast', 'lunch', 'dinner'],
+          dietaryRestrictions: [],
         },
       });
     }

@@ -25,11 +25,12 @@ export async function POST(request: Request) {
     const data = await extractYouTubeData(videoId);
     
     return NextResponse.json(data);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('YouTube extraction error:', error);
     
     // Provide a friendly error message for missing captions or invalid videos
-    const message = error.message || 'Failed to extract video data';
+    const err = error instanceof Error ? error : (error as { message?: string });
+    const message = err?.message || 'Failed to extract video data';
     const status = message.includes('captions enabled') ? 404 : 500;
     
     return NextResponse.json(

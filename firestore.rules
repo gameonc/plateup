@@ -29,6 +29,15 @@ service cloud.firestore {
       match /cookingLog/{logId} {
         allow read, write: if isOwner(userId);
       }
+
+      // Shopping lists subcollections
+      match /shoppingLists/{listId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /shoppingList/{itemId} {
+        allow read, write: if isOwner(userId);
+      }
     }
     
     // Default deny everything else

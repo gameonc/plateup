@@ -7,7 +7,17 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { XIcon, CircleCheckIcon, InfoIcon, TriangleAlertIcon, OctagonXIcon, Loader2Icon } from "lucide-react"
 
-const toast = ToastPrimitive.createToastManager()
+export interface ToastOptions {
+  title?: React.ReactNode;
+  description?: React.ReactNode;
+  type?: "success" | "info" | "warning" | "error" | "loading";
+}
+
+const baseToast = ToastPrimitive.createToastManager<ToastOptions>()
+
+const toast = Object.assign(baseToast, {
+  create: (options: ToastOptions) => baseToast.add(options),
+})
 
 function ToastProvider({ ...props }: ToastPrimitive.Provider.Props) {
   return <ToastPrimitive.Provider {...props} />

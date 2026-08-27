@@ -2,27 +2,80 @@
 
 import React, { useState, useMemo } from "react";
 import Link from "next/link";
-import { BookOpen, Search, Star, Clock, ChefHat, Plus, Sparkles, CirclePlay, Camera, ImageIcon } from "lucide-react";
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import { BookOpen, Search, Plus, Sparkles, X, Filter, Zap } from "lucide-react";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useRecipes } from "@/hooks/useRecipes";
-import { Recipe } from "@/types";
+import { useProfile } from "@/hooks/useProfile";
+import { RecipeCard } from "@/components/recipe/RecipeCard";
+import { RecipeGridSkeleton } from "@/components/ui/skeleton";
+import { DIETARY_OPTIONS, type DietaryRestriction } from "@/types";
+import { cn } from "@/lib/utils";
+
+type FilterCategory = 'all' | 'my-diet' | 'quick' | DietaryRestriction;
 
 export default function RecipesPage() {
   const { recipes, loading, error } = useRecipes();
+  const { preferences } = useProfile();
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("newest");
+  const [activeFilter, setActiveFilter] = useState<FilterCategory>('all');
+
+  const userDietaryRestrictions = useMemo(
+    () => preferences?.dietaryRestrictions || [],
+    [preferences?.dietaryRestrictions]
+  );
+
+  const filterChips = useMemo(() => [
+    { id: 'all' as FilterCategory, label: 'All Recipes' },
+    ...(userDietaryRestrictions.length > 0
+      ? [{ id: 'my-diet' as FilterCategory, label: 'Matches My Preferences ✨' }]
+      : []),
+    { id: 'quick' as FilterCategory, label: 'Quick (<30m) ⚡' },
+    ...DIETARY_OPTIONS.map((opt) => ({
+      id: opt.id as FilterCategory,
+      label: opt.label,
+    })),
+  ], [userDietaryRestrictions]);
 
   const filteredAndSortedRecipes = useMemo(() => {
     if (!recipes) return [];
     
-    let filtered = recipes.filter((recipe) => {
-      const matchName = recipe.name?.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchTags = recipe.tags?.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()));
-      return matchName || matchTags;
+    const filtered = recipes.filter((recipe) => {
+      // 1. Text search
+      const q = searchQuery.toLowerCase().trim();
+      const matchName = !q || recipe.name?.toLowerCase().includes(q);
+      const matchTags = !q || recipe.tags?.some((tag) => tag.toLowerCase().includes(q));
+      const matchDietaryTags = !q || recipe.dietaryTags?.some((tag) => tag.toLowerCase().includes(q));
+      const matchesSearch = matchName || matchTags || matchDietaryTags;
+
+      if (!matchesSearch) return false;
+
+      // 2. Dietary Category Filter
+      const recipeDietTags = [
+        ...(Array.isArray(recipe.dietaryTags) ? recipe.dietaryTags.map(t => t.toLowerCase()) : []),
+        ...(Array.isArray(recipe.tags) ? recipe.tags.map(t => t.toLowerCase()) : [])
+      ];
+
+      if (activeFilter === 'all') {
+        return true;
+      }
+
+      if (activeFilter === 'quick') {
+        const totalTime = (recipe.prepTimeMinutes || 0) + (recipe.cookTimeMinutes || 0);
+        return totalTime > 0 && totalTime <= 30;
+      }
+
+      if (activeFilter === 'my-diet') {
+        if (userDietaryRestrictions.length === 0) return true;
+        return userDietaryRestrictions.every((req: string) => recipeDietTags.includes(req.toLowerCase()));
+      }
+
+      // Specific dietary restriction
+      return recipeDietTags.includes(activeFilter.toLowerCase());
     });
 
     return filtered.sort((a, b) => {
@@ -39,137 +92,160 @@ export default function RecipesPage() {
           return 0;
       }
     });
-  }, [recipes, searchQuery, sortBy]);
-
-  if (loading) {
-    return <div className="p-8 flex justify-center items-center h-full text-muted-foreground"><ChefHat className="w-8 h-8 animate-pulse" /></div>;
-  }
-
-  if (error) {
-    return <div className="p-8 text-destructive text-center">Error loading recipes.</div>;
-  }
+  }, [recipes, searchQuery, sortBy, activeFilter, userDietaryRestrictions]);
 
   return (
-    <div className="container max-w-7xl mx-auto p-4 md:p-8 space-y-8">
+    <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-3">
-          <BookOpen className="w-8 h-8 text-primary" />
-          <h1 className="text-3xl font-bold tracking-tight">My Recipes</h1>
-          <Badge variant="secondary" className="ml-2 rounded-full px-2.5">
+          <div className="p-2.5 bg-orange-100 text-primary rounded-2xl shadow-xs">
+            <BookOpen className="w-6 h-6" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-extrabold tracking-tight text-stone-900">My Recipes</h1>
+            <p className="text-xs text-stone-500 mt-0.5">Your personal culinary knowledge base</p>
+          </div>
+          <Badge variant="secondary" className="ml-1 rounded-full px-3 py-0.5 bg-orange-100 text-orange-900 font-bold text-sm">
             {recipes?.length || 0}
           </Badge>
         </div>
         <Link href="/extract">
-          <Button>
+          <Button className="bg-primary hover:bg-orange-700 text-primary-foreground shadow-sm rounded-xl font-semibold">
             <Plus className="w-4 h-4 mr-2" />
             New Recipe
           </Button>
         </Link>
       </div>
 
-      {recipes?.length === 0 ? (
-        <Card className="flex flex-col items-center justify-center p-12 text-center border-dashed border-2">
-          <Sparkles className="w-12 h-12 text-muted-foreground mb-4" />
-          <h3 className="text-xl font-semibold mb-2">No recipes yet!</h3>
-          <p className="text-muted-foreground mb-6 max-w-sm">
-            Extract your first recipe from a YouTube video or photo to get started.
+      {loading ? (
+        <RecipeGridSkeleton count={6} />
+      ) : error ? (
+        <div className="p-8 text-destructive text-center bg-red-50 rounded-2xl border border-red-200">
+          Error loading recipes. Please refresh the page.
+        </div>
+      ) : recipes?.length === 0 ? (
+        <Card className="flex flex-col items-center justify-center p-12 text-center border-dashed border-2 border-stone-200 rounded-2xl bg-white">
+          <div className="p-4 bg-orange-50 text-primary rounded-full mb-4">
+            <Sparkles className="w-8 h-8" />
+          </div>
+          <h3 className="text-xl font-bold text-stone-900 mb-2">No recipes yet</h3>
+          <p className="text-stone-500 mb-6 max-w-sm text-sm">
+            Extract recipes from YouTube videos or photos to get started.
           </p>
           <Link href="/extract">
-            <Button size="lg">Extract Recipe</Button>
+            <Button size="lg" className="bg-primary hover:bg-orange-700 text-primary-foreground font-semibold rounded-xl">
+              Extract Your First Recipe
+            </Button>
           </Link>
         </Card>
       ) : (
         <>
-          <div className="flex flex-col md:flex-row gap-4 items-center">
-            <div className="relative w-full md:max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input 
-                placeholder="Search by name or tags..." 
-                className="pl-9 w-full"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+          {/* Controls: Search, Sort, and Dietary Filter Pills */}
+          <div className="space-y-4">
+            <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
+              <div className="relative flex-1 md:max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
+                <Input 
+                  placeholder="Search recipes, ingredients, or tags..." 
+                  className="pl-9 pr-8 w-full rounded-xl border-stone-300 focus-visible:ring-primary bg-white shadow-xs"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                {searchQuery && (
+                  <button 
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <Select value={sortBy} onValueChange={(v) => v && setSortBy(v)}>
+                  <SelectTrigger className="w-full md:w-[190px] rounded-xl border-stone-300 bg-white shadow-xs">
+                    <SelectValue placeholder="Sort by..." />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    <SelectItem value="newest">Newest First</SelectItem>
+                    <SelectItem value="highest-rated">Highest Rated</SelectItem>
+                    <SelectItem value="most-made">Most Made</SelectItem>
+                    <SelectItem value="recently-made">Recently Made</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div className="w-full md:w-auto ml-auto">
-              <Select value={sortBy} onValueChange={(v) => v && setSortBy(v)}>
-                <SelectTrigger className="w-full md:w-[200px]">
-                  <SelectValue placeholder="Sort by..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="newest">Newest First</SelectItem>
-                  <SelectItem value="highest-rated">Highest Rated</SelectItem>
-                  <SelectItem value="most-made">Most Made</SelectItem>
-                  <SelectItem value="recently-made">Recently Made</SelectItem>
-                </SelectContent>
-              </Select>
+
+            {/* Interactive Dietary Filter Chips Bar (R4) */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none pt-1">
+              <div className="flex items-center gap-1.5 shrink-0 text-stone-400 mr-1 text-xs font-bold uppercase tracking-wider">
+                <Filter className="w-3.5 h-3.5" />
+                <span>Filter:</span>
+              </div>
+              {filterChips.map((chip) => {
+                const isActive = activeFilter === chip.id;
+                return (
+                  <button
+                    key={chip.id}
+                    type="button"
+                    onClick={() => setActiveFilter(chip.id)}
+                    className={cn(
+                      "px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer border select-none",
+                      isActive
+                        ? "bg-primary text-primary-foreground border-primary shadow-xs"
+                        : "bg-white text-stone-700 border-stone-200 hover:bg-stone-50 hover:border-stone-300"
+                    )}
+                  >
+                    {chip.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
+          {/* Results Summary */}
+          <div className="flex items-center justify-between text-xs text-stone-500 font-medium px-1">
+            <span>
+              Showing <strong>{filteredAndSortedRecipes.length}</strong> of <strong>{recipes.length}</strong> recipes
+              {activeFilter !== 'all' && ` • Filter: ${activeFilter}`}
+            </span>
+            {(searchQuery || activeFilter !== 'all') && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery("");
+                  setActiveFilter('all');
+                }}
+                className="text-primary hover:underline font-semibold cursor-pointer"
+              >
+                Reset filters
+              </button>
+            )}
+          </div>
+
           {filteredAndSortedRecipes.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              No recipes found matching your search.
+            <div className="text-center py-16 bg-stone-50 rounded-2xl border border-stone-200/80 space-y-3">
+              <Zap className="w-8 h-8 mx-auto text-stone-400" />
+              <p className="text-stone-700 font-bold">No recipes found matching your filters</p>
+              <p className="text-xs text-stone-500 max-w-sm mx-auto">
+                Try selecting &ldquo;All Recipes&rdquo; or adjusting your search term.
+              </p>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => {
+                  setSearchQuery("");
+                  setActiveFilter('all');
+                }}
+                className="rounded-xl"
+              >
+                Clear All Filters
+              </Button>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredAndSortedRecipes.map((recipe) => (
-                <Link key={recipe.id} href={`/recipes/${recipe.id}`}>
-                  <Card className="h-full hover:shadow-md transition-shadow cursor-pointer overflow-hidden group flex flex-col">
-                    <div className="aspect-video relative bg-muted flex items-center justify-center overflow-hidden">
-                      {recipe.thumbnailUrl ? (
-                        <img 
-                          src={recipe.thumbnailUrl} 
-                          alt={recipe.name} 
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center">
-                          <ChefHat className="w-12 h-12 text-primary/20" />
-                        </div>
-                      )}
-                      <div className="absolute top-2 right-2">
-                        {recipe.source === "youtube" && (
-                          <Badge className="bg-red-500 hover:bg-red-600 border-none shadow-sm gap-1 text-white"><CirclePlay className="w-3 h-3"/> YouTube</Badge>
-                        )}
-                        {recipe.source === "image" && (
-                          <Badge className="bg-blue-500 hover:bg-blue-600 border-none shadow-sm gap-1 text-white"><Camera className="w-3 h-3"/> Photo</Badge>
-                        )}
-                        {recipe.source === "manual" && (
-                          <Badge className="bg-green-500 hover:bg-green-600 border-none shadow-sm gap-1 text-white"><ImageIcon className="w-3 h-3"/> Manual</Badge>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <CardContent className="p-4 flex-grow">
-                      <div className="flex justify-between items-start mb-2 gap-2">
-                        <h3 className="font-semibold text-lg line-clamp-2 leading-tight group-hover:text-primary transition-colors">{recipe.name}</h3>
-                        <div className="flex items-center gap-1 shrink-0 text-amber-500">
-                          <Star className={`w-4 h-4 ${recipe.rating && recipe.rating > 0 ? "fill-amber-500" : "text-muted-foreground/30"}`} />
-                          <span className="text-sm font-medium text-foreground">{recipe.rating || "—"}</span>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center text-sm text-muted-foreground mb-4">
-                        <Clock className="w-4 h-4 mr-1.5" />
-                        <span>{(recipe.prepTimeMinutes || 0) + (recipe.cookTimeMinutes || 0)} min total</span>
-                      </div>
-
-                      {recipe.tags && recipe.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 mt-auto">
-                          {recipe.tags.slice(0, 3).map((tag, i) => (
-                            <Badge key={i} variant="secondary" className="text-xs font-normal">
-                              {tag}
-                            </Badge>
-                          ))}
-                          {recipe.tags.length > 3 && (
-                            <Badge variant="outline" className="text-xs font-normal">
-                              +{recipe.tags.length - 3}
-                            </Badge>
-                          )}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </Link>
+                <RecipeCard key={recipe.id} recipe={recipe} />
               ))}
             </div>
           )}
@@ -178,3 +254,4 @@ export default function RecipesPage() {
     </div>
   );
 }
+

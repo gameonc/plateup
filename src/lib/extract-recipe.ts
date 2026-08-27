@@ -1,4 +1,5 @@
 import { recipeModel, YOUTUBE_RECIPE_PROMPT, IMAGE_RECIPE_PROMPT } from './ai';
+import type { DietaryRestriction } from '@/types';
 
 export interface ExtractedRecipe {
   name: string;
@@ -8,12 +9,75 @@ export interface ExtractedRecipe {
   servings: number;
   difficulty: 'easy' | 'medium' | 'hard';
   tags: string[];
+  dietaryTags?: string[];
   ingredients: {
     item: string;
     amount: string;
     unit: string;
   }[];
   instructions: string[];
+}
+
+/**
+ * Deterministic dietary tag detector to complement and validate AI extraction
+ */
+export function detectDietaryTags(
+  ingredients: { item: string }[],
+  instructions: string[] = []
+): DietaryRestriction[] {
+  const text = (
+    ingredients.map((i) => i.item).join(' ') +
+    ' ' +
+    instructions.join(' ')
+  ).toLowerCase();
+
+  const tags: DietaryRestriction[] = [];
+
+  const hasMeat = /\b(beef|pork|chicken|guanciale|bacon|turkey|lamb|veal|prosciutto|pancetta|sausage|duck|venison|meat)\b/.test(text);
+  const hasFish = /\b(salmon|tuna|fish|shrimp|cod|anchov|tilapia|halibut|trout|crab|lobster|scallop|clam|mussel|calamari|squid|seafood)\b/.test(text);
+  const hasDairy = /\b(milk|cream|butter|cheese|pecorino|parmesan|cheddar|mozzarella|yogurt|whey|ricotta|ghee|sour cream|half and half)\b/.test(text);
+  const hasGluten = /\b(flour|wheat|spaghetti|pasta|sourdough|bread|bun|buns|tortilla|tortillas|soy sauce|barley|rye|noodle|noodles|panko|couscous)\b/.test(text);
+  const hasNuts = /\b(peanut|peanuts|almond|almonds|walnut|walnuts|cashew|cashews|pecan|pecans|hazelnut|hazelnuts|macadamia|pistachio|pistachios|nut|nuts)\b/.test(text);
+
+  if (!hasMeat && !hasFish) tags.push('vegetarian');
+  if (!hasMeat && !hasFish && !hasDairy) tags.push('vegan');
+  if (!hasGluten) tags.push('gluten-free');
+  if (!hasDairy) tags.push('dairy-free');
+  if (!hasNuts) tags.push('nut-free');
+  if (!hasMeat && hasFish) tags.push('pescatarian');
+
+  return tags;
+}
+
+function processExtractedRecipe(raw: Record<string, unknown>): ExtractedRecipe {
+  const ingredients = Array.isArray(raw.ingredients)
+    ? (raw.ingredients as { item: string; amount: string; unit: string }[])
+    : [];
+  const instructions = Array.isArray(raw.instructions)
+    ? (raw.instructions as string[])
+    : [];
+
+  const detected = detectDietaryTags(ingredients, instructions);
+  const rawDietary = Array.isArray(raw.dietaryTags)
+    ? (raw.dietaryTags as string[]).map((t) => t.toLowerCase())
+    : [];
+
+  const combinedDietaryTags = Array.from(new Set([...rawDietary, ...detected]));
+
+  return {
+    name: (raw.name as string) || 'Extracted Recipe',
+    description: (raw.description as string) || '',
+    prepTimeMinutes: typeof raw.prepTimeMinutes === 'number' ? raw.prepTimeMinutes : 15,
+    cookTimeMinutes: typeof raw.cookTimeMinutes === 'number' ? raw.cookTimeMinutes : 20,
+    servings: typeof raw.servings === 'number' ? raw.servings : 4,
+    difficulty: (['easy', 'medium', 'hard'].includes(raw.difficulty as string)
+      ? raw.difficulty
+      : 'medium') as 'easy' | 'medium' | 'hard',
+    tags: Array.isArray(raw.tags) ? (raw.tags as string[]) : [],
+    dietaryTags: combinedDietaryTags,
+    ingredients,
+    instructions,
+  };
 }
 
 /**
@@ -31,11 +95,13 @@ export async function extractRecipeFromTranscript(
   
   const result = await recipeModel.generateContent(prompt);
   const jsonText = result.response.text();
+  const cleanJson = jsonText.replace(/```(?:json)?\n?/g, '').replace(/```/g, '').trim();
   
   try {
-    return JSON.parse(jsonText) as ExtractedRecipe;
+    const raw = JSON.parse(cleanJson);
+    return processExtractedRecipe(raw);
   } catch (error) {
-    console.error('Failed to parse Gemini recipe output:', jsonText);
+    console.error('Failed to parse Gemini recipe output:', jsonText, error);
     throw new Error('Failed to parse the recipe from the AI response.');
   }
 }
@@ -61,11 +127,14 @@ export async function extractRecipeFromImage(
   
   const result = await recipeModel.generateContent([IMAGE_RECIPE_PROMPT, imagePart]);
   const jsonText = result.response.text();
+  const cleanJson = jsonText.replace(/```(?:json)?\n?/g, '').replace(/```/g, '').trim();
   
   try {
-    return JSON.parse(jsonText) as ExtractedRecipe;
+    const raw = JSON.parse(cleanJson);
+    return processExtractedRecipe(raw);
   } catch (error) {
-    console.error('Failed to parse Gemini recipe output:', jsonText);
+    console.error('Failed to parse Gemini recipe output:', jsonText, error);
     throw new Error('Failed to parse the recipe from the AI response.');
   }
 }
+

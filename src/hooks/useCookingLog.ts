@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { collection, query, orderBy, where, onSnapshot, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from './useAuth';
@@ -15,12 +15,9 @@ export function useCookingLog(days: number = 14) {
 
   useEffect(() => {
     if (!user) {
-      setLogs([]);
-      setLoading(false);
       return;
     }
 
-    setLoading(true);
     const startDate = subDays(new Date(), days);
     
     const logsRef = collection(db, 'users', user.uid, 'cookingLog');
@@ -55,20 +52,23 @@ export function useCookingLog(days: number = 14) {
     return () => unsubscribe();
   }, [user, days]);
 
+  const activeLogs = useMemo(() => (user ? logs : []), [user, logs]);
+  const activeLoading = useMemo(() => (user ? loading : false), [user, loading]);
+
   const getRecentRecipeIds = useCallback(
     (recentDays: number = days) => {
       const thresholdDate = subDays(new Date(), recentDays);
-      const recentIds = logs
+      const recentIds = activeLogs
         .filter(log => log.cookedAt >= thresholdDate)
         .map(log => log.recipeId);
       return new Set(recentIds);
     },
-    [logs, days]
+    [activeLogs, days]
   );
 
   return {
-    logs,
-    loading,
+    logs: activeLogs,
+    loading: activeLoading,
     error,
     getRecentRecipeIds,
   };

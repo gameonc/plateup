@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   collection,
   doc,
@@ -25,12 +25,9 @@ export function useRecipes() {
 
   useEffect(() => {
     if (!user) {
-      setRecipes([]);
-      setLoading(false);
       return;
     }
 
-    setLoading(true);
     const recipesRef = collection(db, 'users', user.uid, 'recipes');
     const q = query(recipesRef, orderBy('createdAt', 'desc'));
 
@@ -59,6 +56,9 @@ export function useRecipes() {
 
     return () => unsubscribe();
   }, [user]);
+
+  const activeRecipes = useMemo(() => (user ? recipes : []), [user, recipes]);
+  const activeLoading = useMemo(() => (user ? loading : false), [user, loading]);
 
   const addRecipe = useCallback(
     async (recipe: Omit<Recipe, 'id' | 'createdAt' | 'updatedAt' | 'timesMade'>) => {
@@ -109,7 +109,7 @@ export function useRecipes() {
       if (!user) throw new Error('Must be logged in to mark recipe as made');
       
       const recipeRef = doc(db, 'users', user.uid, 'recipes', id);
-      const recipe = recipes.find(r => r.id === id);
+      const recipe = activeRecipes.find(r => r.id === id);
       
       if (!recipe) throw new Error('Recipe not found');
 
@@ -128,12 +128,12 @@ export function useRecipes() {
         cookedAt: serverTimestamp(),
       });
     },
-    [user, recipes]
+    [user, activeRecipes]
   );
 
   return {
-    recipes,
-    loading,
+    recipes: activeRecipes,
+    loading: activeLoading,
     error,
     addRecipe,
     updateRecipe,
