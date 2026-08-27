@@ -8,8 +8,7 @@
       "emailPassword": true,
       "googleSignIn": {
         "oAuthBrandDisplayName": "PlateUp",
-        "supportEmail": "support@plateup.app",
-        "authorizedRedirectUris": ["http://localhost"]
+        "supportEmail": "cady41@gmail.com"
       }
     }
   },
