@@ -71,32 +71,58 @@ export default function MealPlanPage() {
   const [pickerTab, setPickerTab] = useState<'saved' | 'discover'>('discover');
   const [discoverMeals, setDiscoverMeals] = useState<MealDBMeal[]>([]);
   const [discoverLoading, setDiscoverLoading] = useState(false);
+  const [cuisineFilter, setCuisineFilter] = useState<string>('all');
 
-  // Popular categories to show in the picker (skip obscure ones)
+  // Cuisines available in TheMealDB
+  const CUISINES = [
+    { id: 'all', label: '🌍 All', flag: '' },
+    { id: 'American', label: '🇺🇸 American', flag: '🇺🇸' },
+    { id: 'Italian', label: '🇮🇹 Italian', flag: '🇮🇹' },
+    { id: 'Mexican', label: '🇲🇽 Mexican', flag: '🇲🇽' },
+    { id: 'Indian', label: '🇮🇳 Indian', flag: '🇮🇳' },
+    { id: 'Japanese', label: '🇯🇵 Japanese', flag: '🇯🇵' },
+    { id: 'Chinese', label: '🇨🇳 Chinese', flag: '🇨🇳' },
+    { id: 'French', label: '🇫🇷 French', flag: '🇫🇷' },
+    { id: 'British', label: '🇬🇧 British', flag: '🇬🇧' },
+    { id: 'Jamaican', label: '🇯🇲 Jamaican', flag: '🇯🇲' },
+    { id: 'Thai', label: '🇹🇭 Thai', flag: '🇹🇭' },
+    { id: 'Greek', label: '🇬🇷 Greek', flag: '🇬🇷' },
+    { id: 'Spanish', label: '🇪🇸 Spanish', flag: '🇪🇸' },
+    { id: 'Moroccan', label: '🇲🇦 Moroccan', flag: '🇲🇦' },
+    { id: 'Russian', label: '🇷🇺 Russian', flag: '🇷🇺' },
+    { id: 'Vietnamese', label: '🇻🇳 Vietnamese', flag: '🇻🇳' },
+    { id: 'Canadian', label: '🇨🇦 Canadian', flag: '🇨🇦' },
+    { id: 'Irish', label: '🇮🇪 Irish', flag: '🇮🇪' },
+  ];
+
+  // Popular categories for the "All" default view
   const POPULAR_CATEGORIES = ['Chicken', 'Beef', 'Pasta', 'Seafood', 'Breakfast', 'Dessert', 'Lamb', 'Pork', 'Side', 'Vegetarian'];
 
-  // Load TheMealDB suggestions — curated from popular categories
-  const loadDiscoverMeals = useCallback(async (query?: string) => {
+  // Load TheMealDB suggestions — by cuisine, search, or curated categories
+  const loadDiscoverMeals = useCallback(async (query?: string, cuisine?: string) => {
     setDiscoverLoading(true);
     try {
       if (query && query.trim()) {
         const results = await searchMealsByName(query.trim());
         setDiscoverMeals(results);
+      } else if (cuisine && cuisine !== 'all') {
+        // Filter by cuisine/area
+        const { filterByArea, getMealById } = await import('@/lib/mealdb');
+        const meals = await filterByArea(cuisine);
+        const shuffled = meals.sort(() => Math.random() - 0.5).slice(0, 15);
+        const details = await Promise.all(shuffled.map(m => getMealById(m.idMeal)));
+        setDiscoverMeals(details.filter((m): m is MealDBMeal => m !== null));
       } else {
-        // Load 2 meals from each popular category for a curated mix
+        // Default: load 2 meals from each popular category
         const categoryPromises = POPULAR_CATEGORIES.map(async (cat) => {
-          const { filterByCategory } = await import('@/lib/mealdb');
+          const { filterByCategory, getMealById } = await import('@/lib/mealdb');
           const meals = await filterByCategory(cat);
-          // Pick 2 random meals from each category
           const shuffled = meals.sort(() => Math.random() - 0.5);
           const picks = shuffled.slice(0, 2);
-          // Fetch full details for each pick
-          const { getMealById } = await import('@/lib/mealdb');
           const details = await Promise.all(picks.map(m => getMealById(m.idMeal)));
           return details.filter((m): m is MealDBMeal => m !== null);
         });
         const allMeals = (await Promise.all(categoryPromises)).flat();
-        // Shuffle the final list so it's not grouped by category
         setDiscoverMeals(allMeals.sort(() => Math.random() - 0.5));
       }
     } catch {
@@ -507,6 +533,27 @@ export default function MealPlanPage() {
                     )}
                   >
                     {opt.label}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Cuisine Filter Pills (discover tab only) */}
+            {pickerTab === 'discover' && (
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-xs">
+                {CUISINES.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => { setCuisineFilter(c.id); loadDiscoverMeals(undefined, c.id); }}
+                    className={cn(
+                      "px-2.5 py-1 rounded-lg font-bold transition-all shrink-0 cursor-pointer border select-none text-[11px]",
+                      cuisineFilter === c.id
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-white text-stone-600 border-stone-200 hover:bg-stone-50"
+                    )}
+                  >
+                    {c.label}
                   </button>
                 ))}
               </div>
