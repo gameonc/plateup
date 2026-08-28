@@ -1,4 +1,3 @@
-import { recipeModel, generateWithRetry, YOUTUBE_RECIPE_PROMPT, IMAGE_RECIPE_PROMPT } from './ai';
 import type { DietaryRestriction } from '@/types';
 
 export interface ExtractedRecipe {
@@ -81,84 +80,46 @@ function processExtractedRecipe(raw: Record<string, unknown>): ExtractedRecipe {
 }
 
 /**
- * Extract recipe from YouTube video by passing the URL directly to Gemini.
- * Gemini 2.5 Flash can watch YouTube videos natively — no transcript scraping needed.
+ * Call our server-side API route which uses the Gemini API key securely.
+ */
+async function callExtractAPI(body: Record<string, unknown>): Promise<ExtractedRecipe> {
+  const response = await fetch('/api/extract-recipe', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to extract recipe.');
+  }
+
+  return processExtractedRecipe(data.recipe);
+}
+
+/**
+ * Extract recipe from YouTube video — Gemini watches the video directly (server-side).
  */
 export async function extractRecipeFromYouTubeUrl(
   youtubeUrl: string
 ): Promise<ExtractedRecipe> {
-  const prompt = `You are a professional chef and recipe extractor. Watch this YouTube cooking video and extract the complete recipe.
-
-YouTube Video URL: ${youtubeUrl}
-
-Extract:
-- Recipe name
-- Description of the dish
-- Prep time and cook time in minutes
-- Number of servings
-- Difficulty (easy/medium/hard)
-- All ingredients with exact amounts and units
-- Step-by-step cooking instructions
-- Relevant tags (cuisine type, meal type like breakfast/lunch/dinner)
-- Dietary tags from: 'vegetarian', 'vegan', 'gluten-free', 'dairy-free', 'keto', 'low-carb', 'pescatarian', 'nut-free'
-
-Watch the entire video carefully and extract every ingredient and instruction.`;
-
-  const result = await generateWithRetry(() => recipeModel.generateContent({
-    contents: [{
-      role: 'user',
-      parts: [
-        { text: prompt },
-        {
-          fileData: {
-            fileUri: youtubeUrl,
-            mimeType: 'video/*',
-          },
-        },
-      ],
-    }],
-  }));
-
-  const jsonText = result.response.text();
-  const cleanJson = jsonText.replace(/```(?:json)?\n?/g, '').replace(/```/g, '').trim();
-  
-  try {
-    const raw = JSON.parse(cleanJson);
-    return processExtractedRecipe(raw);
-  } catch (error) {
-    console.error('Failed to parse Gemini recipe output:', jsonText, error);
-    throw new Error('Failed to parse the recipe from the AI response.');
-  }
+  return callExtractAPI({ type: 'youtube-video', youtubeUrl });
 }
 
 /**
- * Extract recipe from YouTube video transcript using Gemini AI (legacy fallback)
+ * Extract recipe from YouTube video transcript (server-side).
  */
 export async function extractRecipeFromTranscript(
   title: string,
   description: string,
   transcript: string
 ): Promise<ExtractedRecipe> {
-  const prompt = YOUTUBE_RECIPE_PROMPT
-    .replace('{title}', title)
-    .replace('{description}', description)
-    .replace('{transcript}', transcript.substring(0, 15000));
-  
-  const result = await generateWithRetry(() => recipeModel.generateContent(prompt));
-  const jsonText = result.response.text();
-  const cleanJson = jsonText.replace(/```(?:json)?\n?/g, '').replace(/```/g, '').trim();
-  
-  try {
-    const raw = JSON.parse(cleanJson);
-    return processExtractedRecipe(raw);
-  } catch (error) {
-    console.error('Failed to parse Gemini recipe output:', jsonText, error);
-    throw new Error('Failed to parse the recipe from the AI response.');
-  }
+  return callExtractAPI({ type: 'youtube-transcript', title, description, transcript });
 }
 
 /**
- * Extract recipe from food image using Gemini AI
+ * Extract recipe from food image (server-side).
  */
 export async function extractRecipeFromImage(
   imageBase64: string,
@@ -167,63 +128,25 @@ export async function extractRecipeFromImage(
   if (!mimeType.startsWith('image/')) {
     throw new Error('Invalid file type. Please provide an image.');
   }
-
-  const result = await generateWithRetry(() => recipeModel.generateContent({
-    contents: [{
-      role: 'user',
-      parts: [
-        { text: IMAGE_RECIPE_PROMPT },
-        {
-          inlineData: {
-            data: imageBase64,
-            mimeType,
-          },
-        },
-      ],
-    }],
-  }));
-  const jsonText = result.response.text();
-  const cleanJson = jsonText.replace(/```(?:json)?\n?/g, '').replace(/```/g, '').trim();
-  
-  try {
-    const raw = JSON.parse(cleanJson);
-    return processExtractedRecipe(raw);
-  } catch (error) {
-    console.error('Failed to parse Gemini recipe output:', jsonText, error);
-    throw new Error('Failed to parse the recipe from the AI response.');
-  }
+  return callExtractAPI({ type: 'image', imageBase64, mimeType });
 }
 
 /**
- * Measurement vocabulary mirrors the ingredient terms already used by
- * detectDietaryTags, kept deliberately narrow so promo blurbs don't register.
+ * Measurement vocabulary for detecting recipe content in descriptions.
  */
 const MEASUREMENT_PATTERN =
   /\d+\s*(?:cups?|tbsp|tsp|tablespoons?|teaspoons?|oz|ounces?|lbs?|pounds?|cloves?|grams?|ml|sticks?|pints?|quarts?)\b/gi;
 
-/** A description only counts as a recipe source if it carries real quantities. */
 function hasRecipeSignal(text: string): boolean {
   return (text.match(MEASUREMENT_PATTERN) || []).length >= 3;
 }
 
-/** Guard against the cheap path returning a plausible-looking but empty recipe. */
 function isThinRecipe(recipe: ExtractedRecipe): boolean {
   return recipe.ingredients.length < 3 || recipe.instructions.length === 0;
 }
 
 /**
- * Layered YouTube extraction.
- *
- * Many cooking channels publish the full ingredient list in the video
- * description, which is far cheaper and faster to read than having Gemini watch
- * the video. So: try the description first, and fall back to the video whenever
- * that path is unavailable, unconvincing, or produces a thin result.
- *
- * The description must be fetched server-side — the browser cannot fetch
- * youtube.com directly (CORS).
- *
- * @param onEscalate called when falling back to the (slower) video path, so the
- *                   UI can explain the wait.
+ * Layered YouTube extraction — try description first (cheap), fall back to video (thorough).
  */
 export async function extractRecipeFromYouTube(
   youtubeUrl: string,
@@ -250,7 +173,6 @@ export async function extractRecipeFromYouTube(
       }
     }
   } catch (error) {
-    // A failure here is never fatal — it just means we take the video path.
     console.warn('Description path unavailable, escalating to video:', error);
   }
 
