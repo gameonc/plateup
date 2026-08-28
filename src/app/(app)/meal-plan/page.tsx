@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { addWeeks, subWeeks, startOfWeek, endOfWeek, format, getISOWeek, getYear } from 'date-fns';
+import { searchMealsByName, getRandomMeals, mealToRecipeData, type MealDBMeal } from '@/lib/mealdb';
 import { 
   Calendar, 
   ChevronLeft, 
@@ -60,13 +61,34 @@ export default function MealPlanPage() {
   const userDietaryRestrictions = preferences?.dietaryRestrictions || [];
   
   const { mealPlan, loading: mealPlanLoading, setMealSlot, clearMealSlot, saveMealPlan } = useMealPlan(currentWeekId);
-  const { recipes, loading: recipesLoading } = useRecipes();
+  const { recipes, loading: recipesLoading, addRecipe } = useRecipes();
   const { getRecentRecipeIds, loading: logsLoading } = useCookingLog(repeatWindowDays);
 
   const [activeSlot, setActiveSlot] = useState<{ day: DayOfWeek; meal: MealTime } | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [pickerDietaryFilter, setPickerDietaryFilter] = useState<string>('all');
   const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const [pickerTab, setPickerTab] = useState<'saved' | 'discover'>('discover');
+  const [discoverMeals, setDiscoverMeals] = useState<MealDBMeal[]>([]);
+  const [discoverLoading, setDiscoverLoading] = useState(false);
+
+  // Load TheMealDB suggestions when picker opens on Discover tab
+  const loadDiscoverMeals = useCallback(async (query?: string) => {
+    setDiscoverLoading(true);
+    try {
+      if (query && query.trim()) {
+        const results = await searchMealsByName(query.trim());
+        setDiscoverMeals(results);
+      } else {
+        const results = await getRandomMeals(12);
+        setDiscoverMeals(results);
+      }
+    } catch {
+      console.warn('Failed to load discover meals');
+    } finally {
+      setDiscoverLoading(false);
+    }
+  }, []);
 
   // Mobile selected day (defaults to current day of week)
   const [selectedMobileDay, setSelectedMobileDay] = useState<DayOfWeek>(() => {
@@ -146,11 +168,35 @@ export default function MealPlanPage() {
     setActiveSlot(null);
   };
 
+  // Handle selecting a TheMealDB meal — save it first, then assign
+  const handleSelectDiscoverMeal = async (meal: MealDBMeal) => {
+    if (!activeSlot) return;
+    const recipeData = mealToRecipeData(meal);
+    const recipeId = await addRecipe(recipeData);
+    await setMealSlot(activeSlot.day, activeSlot.meal, {
+      recipeId,
+      recipeName: recipeData.name,
+      thumbnailUrl: recipeData.thumbnailUrl,
+    });
+    toast.create({
+      title: "Meal Assigned! 🍽️",
+      description: `Saved "${recipeData.name}" and added to ${formatDayName(activeSlot.day)} ${formatMealTime(activeSlot.meal)}.`,
+      type: "success",
+    });
+    setIsPickerOpen(false);
+    setActiveSlot(null);
+  };
+
   const openPicker = (day: DayOfWeek, meal: MealTime) => {
     setActiveSlot({ day, meal });
     setSearchQuery('');
     setPickerDietaryFilter('all');
+    setPickerTab(recipes.length > 0 ? 'saved' : 'discover');
     setIsPickerOpen(true);
+    // Pre-load discover meals
+    if (discoverMeals.length === 0) {
+      loadDiscoverMeals();
+    }
   };
 
   const recentIds = useMemo(() => getRecentRecipeIds(repeatWindowDays), [getRecentRecipeIds, repeatWindowDays]);
@@ -374,105 +420,206 @@ export default function MealPlanPage() {
             </DialogTitle>
           </DialogHeader>
           
+          {/* Tabs: My Recipes / Discover */}
+          <div className="flex gap-1 bg-stone-100 rounded-lg p-0.5">
+            <button
+              type="button"
+              onClick={() => setPickerTab('saved')}
+              className={cn(
+                "flex-1 text-sm font-semibold py-1.5 rounded-md transition-all cursor-pointer",
+                pickerTab === 'saved' ? "bg-white text-stone-900 shadow-xs" : "text-stone-500 hover:text-stone-700"
+              )}
+            >
+              My Recipes ({recipes.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => { setPickerTab('discover'); if (discoverMeals.length === 0) loadDiscoverMeals(); }}
+              className={cn(
+                "flex-1 text-sm font-semibold py-1.5 rounded-md transition-all cursor-pointer",
+                pickerTab === 'discover' ? "bg-white text-stone-900 shadow-xs" : "text-stone-500 hover:text-stone-700"
+              )}
+            >
+              Discover
+            </button>
+          </div>
+
           <div className="space-y-3">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
               <Input
                 type="search"
-                placeholder="Search recipes by name, ingredient, or tag..."
+                placeholder={pickerTab === 'saved' ? "Search your recipes..." : "Search thousands of recipes..."}
                 className="pl-9 rounded-xl border-stone-300 focus-visible:ring-primary"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  if (pickerTab === 'discover') {
+                    // Debounce search for TheMealDB
+                    const q = e.target.value;
+                    setTimeout(() => loadDiscoverMeals(q), 500);
+                  }
+                }}
               />
             </div>
 
-            {/* Modal Dietary Filter Pills */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-xs">
-              <button
-                type="button"
-                onClick={() => setPickerDietaryFilter('all')}
-                className={cn(
-                  "px-2.5 py-1 rounded-lg font-bold transition-all shrink-0 cursor-pointer border select-none text-[11px]",
-                  pickerDietaryFilter === 'all'
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-white text-stone-600 border-stone-200 hover:bg-stone-50"
-                )}
-              >
-                All
-              </button>
-              {DIETARY_OPTIONS.map((opt) => (
+            {/* Dietary Filter Pills (saved tab only) */}
+            {pickerTab === 'saved' && (
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-xs">
                 <button
-                  key={opt.id}
                   type="button"
-                  onClick={() => setPickerDietaryFilter(opt.id)}
+                  onClick={() => setPickerDietaryFilter('all')}
                   className={cn(
                     "px-2.5 py-1 rounded-lg font-bold transition-all shrink-0 cursor-pointer border select-none text-[11px]",
-                    pickerDietaryFilter === opt.id
+                    pickerDietaryFilter === 'all'
                       ? "bg-primary text-primary-foreground border-primary"
                       : "bg-white text-stone-600 border-stone-200 hover:bg-stone-50"
                   )}
                 >
-                  {opt.label}
+                  All
                 </button>
-              ))}
-            </div>
+                {DIETARY_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => setPickerDietaryFilter(opt.id)}
+                    className={cn(
+                      "px-2.5 py-1 rounded-lg font-bold transition-all shrink-0 cursor-pointer border select-none text-[11px]",
+                      pickerDietaryFilter === opt.id
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-white text-stone-600 border-stone-200 hover:bg-stone-50"
+                    )}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           
           <Separator className="my-1" />
           
           <div className="flex-1 overflow-y-auto pr-1 space-y-2">
-            {filteredRecipes.length === 0 ? (
-              <div className="text-center text-stone-500 py-12 space-y-2">
-                <ChefHat className="w-8 h-8 mx-auto text-stone-300" />
-                <p className="text-sm">No recipes found matching criteria.</p>
-              </div>
-            ) : (
-              filteredRecipes.map(recipe => {
-                const isRecent = recentIds.has(recipe.id);
-                const dietaryTags = (recipe.dietaryTags || []) as DietaryRestriction[];
+            {/* Saved Recipes Tab */}
+            {pickerTab === 'saved' && (
+              <>
+                {filteredRecipes.length === 0 ? (
+                  <div className="text-center text-stone-500 py-12 space-y-2">
+                    <ChefHat className="w-8 h-8 mx-auto text-stone-300" />
+                    <p className="text-sm">No saved recipes found.</p>
+                    <button
+                      type="button"
+                      onClick={() => setPickerTab('discover')}
+                      className="text-primary text-sm font-semibold hover:underline cursor-pointer"
+                    >
+                      Browse Discover recipes →
+                    </button>
+                  </div>
+                ) : (
+                  filteredRecipes.map(recipe => {
+                    const isRecent = recentIds.has(recipe.id);
+                    const dietaryTags = (recipe.dietaryTags || []) as DietaryRestriction[];
 
-                return (
-                  <div 
-                    key={recipe.id}
-                    onClick={() => handleSelectRecipe(recipe)}
-                    className={cn(
-                      "flex items-center gap-3 p-3 rounded-xl border border-stone-200/80 cursor-pointer transition-all hover:bg-orange-50/60 hover:border-orange-200",
-                      isRecent ? "opacity-80 bg-stone-50" : "bg-white"
-                    )}
-                  >
-                    {recipe.thumbnailUrl ? (
+                    return (
+                      <div 
+                        key={recipe.id}
+                        onClick={() => handleSelectRecipe(recipe)}
+                        className={cn(
+                          "flex items-center gap-3 p-3 rounded-xl border border-stone-200/80 cursor-pointer transition-all hover:bg-orange-50/60 hover:border-orange-200",
+                          isRecent ? "opacity-80 bg-stone-50" : "bg-white"
+                        )}
+                      >
+                        {recipe.thumbnailUrl ? (
+                          <div className="h-12 w-12 rounded-lg overflow-hidden shrink-0 border border-stone-200/60">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={recipe.thumbnailUrl} alt={recipe.name} className="w-full h-full object-cover" />
+                          </div>
+                        ) : (
+                          <div className="h-12 w-12 rounded-lg bg-orange-100 flex items-center justify-center shrink-0 text-primary">
+                            <ChefHat className="h-6 w-6" />
+                          </div>
+                        )}
+                        
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-sm text-stone-900 truncate">{recipe.name}</div>
+                          <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                            <div className="flex items-center text-xs text-stone-500 font-medium mr-1">
+                              <Clock className="mr-1 h-3 w-3 text-primary" />
+                              {(recipe.prepTimeMinutes || 0) + (recipe.cookTimeMinutes || 0)}m
+                            </div>
+                            {dietaryTags.slice(0, 2).map((dTag, idx) => (
+                              <Badge key={idx} variant="outline" className={`text-[10px] h-4 px-1.5 font-semibold capitalize ${getDietaryBadgeClass(dTag)}`}>
+                                {dTag}
+                              </Badge>
+                            ))}
+                            {isRecent && (
+                              <Badge variant="secondary" className="text-[10px] h-4 px-1.5 bg-amber-100 text-amber-800 border-none font-medium">
+                                Recently cooked
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </>
+            )}
+
+            {/* Discover Tab — TheMealDB recipes */}
+            {pickerTab === 'discover' && (
+              <>
+                {discoverLoading ? (
+                  <div className="text-center py-12 space-y-2">
+                    <div className="w-6 h-6 mx-auto border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                    <p className="text-sm text-stone-500">Loading recipes...</p>
+                  </div>
+                ) : discoverMeals.length === 0 ? (
+                  <div className="text-center text-stone-500 py-12 space-y-2">
+                    <ChefHat className="w-8 h-8 mx-auto text-stone-300" />
+                    <p className="text-sm">No recipes found. Try a different search.</p>
+                  </div>
+                ) : (
+                  discoverMeals.map(meal => (
+                    <div 
+                      key={meal.idMeal}
+                      onClick={() => handleSelectDiscoverMeal(meal)}
+                      className="flex items-center gap-3 p-3 rounded-xl border border-stone-200/80 cursor-pointer transition-all hover:bg-orange-50/60 hover:border-orange-200 bg-white"
+                    >
                       <div className="h-12 w-12 rounded-lg overflow-hidden shrink-0 border border-stone-200/60">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={recipe.thumbnailUrl} alt={recipe.name} className="w-full h-full object-cover" />
+                        <img src={meal.strMealThumb + '/preview'} alt={meal.strMeal} className="w-full h-full object-cover" />
                       </div>
-                    ) : (
-                      <div className="h-12 w-12 rounded-lg bg-orange-100 flex items-center justify-center shrink-0 text-primary">
-                        <ChefHat className="h-6 w-6" />
-                      </div>
-                    )}
-                    
-                    <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-sm text-stone-900 truncate">{recipe.name}</div>
-                      <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                        <div className="flex items-center text-xs text-stone-500 font-medium mr-1">
-                          <Clock className="mr-1 h-3 w-3 text-primary" />
-                          {(recipe.prepTimeMinutes || 0) + (recipe.cookTimeMinutes || 0)}m
+                      
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-sm text-stone-900 truncate">{meal.strMeal}</div>
+                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                          {meal.strArea && (
+                            <Badge variant="outline" className="text-[10px] h-4 px-1.5 font-medium text-stone-600 border-stone-200">
+                              {meal.strArea}
+                            </Badge>
+                          )}
+                          {meal.strCategory && (
+                            <Badge variant="outline" className="text-[10px] h-4 px-1.5 font-medium text-orange-700 border-orange-200 bg-orange-50">
+                              {meal.strCategory}
+                            </Badge>
+                          )}
                         </div>
-                        {dietaryTags.slice(0, 2).map((dTag, idx) => (
-                          <Badge key={idx} variant="outline" className={`text-[10px] h-4 px-1.5 font-semibold capitalize ${getDietaryBadgeClass(dTag)}`}>
-                            {dTag}
-                          </Badge>
-                        ))}
-                        {isRecent && (
-                          <Badge variant="secondary" className="text-[10px] h-4 px-1.5 bg-amber-100 text-amber-800 border-none font-medium">
-                            Recently cooked
-                          </Badge>
-                        )}
                       </div>
                     </div>
-                  </div>
-                );
-              })
+                  ))
+                )}
+                
+                {!discoverLoading && discoverMeals.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => loadDiscoverMeals(searchQuery || undefined)}
+                    className="w-full py-2 text-sm text-primary font-semibold hover:underline cursor-pointer"
+                  >
+                    Shuffle — load more recipes
+                  </button>
+                )}
+              </>
             )}
           </div>
         </DialogContent>
@@ -480,4 +627,3 @@ export default function MealPlanPage() {
     </div>
   );
 }
-

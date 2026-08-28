@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Clock, Users, ChefHat, BookmarkPlus, Check, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
+import { AccuracyDisclaimer } from './AccuracyDisclaimer';
 
 interface RecipePreviewProps {
   recipe: ExtractedRecipe;
@@ -34,6 +35,7 @@ export function RecipePreview({ recipe, isSaving, isSaved, onSave }: RecipePrevi
             ))}
           </div>
         )}
+        <AccuracyDisclaimer />
         {recipe.tags && recipe.tags.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mt-2">
             {recipe.tags.map((tag, index) => (

@@ -1,5 +1,6 @@
 import AuthGuard from '@/components/auth/AuthGuard';
 import { Navbar } from '@/components/layout/Navbar';
+import { Footer } from '@/components/layout/Footer';
 
 export default function AppLayout({
   children,
@@ -14,6 +15,7 @@ export default function AppLayout({
         <main className="flex-1 pb-20 md:pb-8">
           {children}
         </main>
+        <Footer />
       </div>
     </AuthGuard>
   );
