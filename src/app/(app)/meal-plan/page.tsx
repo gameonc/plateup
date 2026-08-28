@@ -72,7 +72,10 @@ export default function MealPlanPage() {
   const [discoverMeals, setDiscoverMeals] = useState<MealDBMeal[]>([]);
   const [discoverLoading, setDiscoverLoading] = useState(false);
 
-  // Load TheMealDB suggestions when picker opens on Discover tab
+  // Popular categories to show in the picker (skip obscure ones)
+  const POPULAR_CATEGORIES = ['Chicken', 'Beef', 'Pasta', 'Seafood', 'Breakfast', 'Dessert', 'Lamb', 'Pork', 'Side', 'Vegetarian'];
+
+  // Load TheMealDB suggestions — curated from popular categories
   const loadDiscoverMeals = useCallback(async (query?: string) => {
     setDiscoverLoading(true);
     try {
@@ -80,8 +83,21 @@ export default function MealPlanPage() {
         const results = await searchMealsByName(query.trim());
         setDiscoverMeals(results);
       } else {
-        const results = await getRandomMeals(12);
-        setDiscoverMeals(results);
+        // Load 2 meals from each popular category for a curated mix
+        const categoryPromises = POPULAR_CATEGORIES.map(async (cat) => {
+          const { filterByCategory } = await import('@/lib/mealdb');
+          const meals = await filterByCategory(cat);
+          // Pick 2 random meals from each category
+          const shuffled = meals.sort(() => Math.random() - 0.5);
+          const picks = shuffled.slice(0, 2);
+          // Fetch full details for each pick
+          const { getMealById } = await import('@/lib/mealdb');
+          const details = await Promise.all(picks.map(m => getMealById(m.idMeal)));
+          return details.filter((m): m is MealDBMeal => m !== null);
+        });
+        const allMeals = (await Promise.all(categoryPromises)).flat();
+        // Shuffle the final list so it's not grouped by category
+        setDiscoverMeals(allMeals.sort(() => Math.random() - 0.5));
       }
     } catch {
       console.warn('Failed to load discover meals');
