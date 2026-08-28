@@ -19,8 +19,30 @@ function DialogPortal({ ...props }: DialogPrimitive.Portal.Props) {
   return <DialogPrimitive.Portal data-slot="dialog-portal" {...props} />
 }
 
-function DialogClose({ ...props }: DialogPrimitive.Close.Props) {
-  return <DialogPrimitive.Close data-slot="dialog-close" {...props} />
+function DialogClose({
+  asChild,
+  render,
+  children,
+  ...props
+}: DialogPrimitive.Close.Props & { asChild?: boolean }) {
+  if (asChild && React.isValidElement(children)) {
+    return (
+      <DialogPrimitive.Close
+        data-slot="dialog-close"
+        render={children as React.ReactElement}
+        {...props}
+      />
+    );
+  }
+  return (
+    <DialogPrimitive.Close
+      data-slot="dialog-close"
+      render={render}
+      {...props}
+    >
+      {children}
+    </DialogPrimitive.Close>
+  );
 }
 
 function DialogOverlay({

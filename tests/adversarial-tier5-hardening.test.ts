@@ -572,7 +572,7 @@ describe('Tier 5 Adversarial Coverage Hardening Suite', () => {
     it('2.5 Handles null, undefined, or empty meal plan gracefully', () => {
       assert.deepStrictEqual(aggregateMealPlanIngredients(null, []), []);
       assert.deepStrictEqual(aggregateMealPlanIngredients(undefined, []), []);
-      assert.deepStrictEqual(aggregateMealPlanIngredients({ id: 'w1', weekStart: new Date(), meals: {} as any, createdAt: new Date() }, []), []);
+      assert.deepStrictEqual(aggregateMealPlanIngredients({ id: 'w1', weekStart: new Date(), meals: {} as unknown as WeekMeals, createdAt: new Date() }, []), []);
     });
   });
 
@@ -690,7 +690,7 @@ describe('Tier 5 Adversarial Coverage Hardening Suite', () => {
 
     it('3.4 Empty or null dietary restrictions returns all recipes', () => {
       assert.strictEqual(filterRecipesByDietary(sampleRecipes, []).length, 4);
-      assert.strictEqual(filterRecipesByDietary(sampleRecipes, null as any).length, 4);
+      assert.strictEqual(filterRecipesByDietary(sampleRecipes, null as unknown as string[]).length, 4);
     });
 
     it('3.5 Auto-Fill with 0-Matching Recipes: Preserves locked slots and avoids crashing', () => {

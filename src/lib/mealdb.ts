@@ -1,5 +1,7 @@
 'use client';
 
+import { detectDietaryTags } from './dietary.ts';
+
 // TheMealDB API client — https://www.themealdb.com/api.php
 // Uses the free test API key (1) for development
 
@@ -53,8 +55,8 @@ export function parseMealIngredients(meal: MealDBMeal): MealDBIngredient[] {
 }
 
 // Parse instructions into steps
-export function parseMealInstructions(instructions: string): string[] {
-  return instructions
+export function parseMealInstructions(instructions: string | null | undefined): string[] {
+  return (instructions || '')
     .split(/\r?\n/)
     .map(s => s.trim())
     .filter(s => s.length > 0)
@@ -144,10 +146,12 @@ export function mealToRecipeData(meal: MealDBMeal) {
   // Add category and area as tags
   if (meal.strCategory) tags.push(meal.strCategory.toLowerCase());
   if (meal.strArea) tags.push(meal.strArea.toLowerCase());
+
+  const dietaryTags = detectDietaryTags(ingredients, instructions);
   
   return {
     name: meal.strMeal,
-    description: `${meal.strArea} ${meal.strCategory} dish`,
+    description: `${meal.strArea || ''} ${meal.strCategory || ''} dish`.trim(),
     source: 'manual' as const,
     sourceUrl: meal.strSource || meal.strYoutube || undefined,
     thumbnailUrl: meal.strMealThumb,
@@ -156,6 +160,7 @@ export function mealToRecipeData(meal: MealDBMeal) {
     servings: 4,
     difficulty: estimateDifficulty(meal),
     tags: [...new Set(tags)],
+    dietaryTags,
     ingredients,
     instructions,
   };

@@ -40,6 +40,9 @@ const TEST_FILES = [
   path.join(__dirname, 'unit-shopping-m3.test.ts'),
   path.join(__dirname, 'unit-dietary-m4.test.ts'),
   path.join(__dirname, 'adversarial-tier5-hardening.test.ts'),
+  path.join(__dirname, 'unit-qa-improvements.test.ts'),
+  path.join(__dirname, 'adversarial-empirical-verification.test.ts'),
+  path.join(__dirname, 'adversarial-challenger-m2.test.ts'),
 ];
 
 async function main() {

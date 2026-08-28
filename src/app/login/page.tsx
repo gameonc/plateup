@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ChefHat, Loader2, Eye, EyeOff, AlertCircle } from 'lucide-react';
 
-export default function LoginPage() {
+function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -20,12 +20,14 @@ export default function LoginPage() {
   
   const { user, signIn, signUp, signInWithGoogle, loading } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     if (user && !loading) {
-      router.push('/dashboard');
+      const redirectUrl = searchParams.get('redirect') || '/dashboard';
+      router.push(redirectUrl);
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, searchParams]);
 
   const handleAuthError = (err: unknown) => {
     console.error('Auth error:', err);
@@ -329,5 +331,23 @@ export default function LoginPage() {
         By signing in or creating an account, you agree to our Terms of Service and Privacy Policy.
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex flex-col items-center justify-center bg-stone-50 gap-3">
+          <div className="p-3 bg-orange-100 text-primary rounded-2xl animate-pulse">
+            <ChefHat className="h-8 w-8" />
+          </div>
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          <p className="text-sm text-stone-500 font-medium">Preparing your kitchen...</p>
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }

@@ -50,7 +50,8 @@ export default function RecipesPage() {
       const matchName = !q || recipe.name?.toLowerCase().includes(q);
       const matchTags = !q || recipe.tags?.some((tag) => tag.toLowerCase().includes(q));
       const matchDietaryTags = !q || recipe.dietaryTags?.some((tag) => tag.toLowerCase().includes(q));
-      const matchesSearch = matchName || matchTags || matchDietaryTags;
+      const matchIngredients = !q || recipe.ingredients?.some((ing) => (ing.item || ing.name || '')?.toLowerCase().includes(q));
+      const matchesSearch = matchName || matchTags || matchDietaryTags || matchIngredients;
 
       if (!matchesSearch) return false;
 

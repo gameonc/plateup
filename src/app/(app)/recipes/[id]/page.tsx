@@ -17,6 +17,7 @@ import { toast } from "@/components/ui/toast";
 import { RecipeDetailSkeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -366,7 +367,9 @@ export default function RecipeDetailPage() {
               </DialogDescription>
             </DialogHeader>
             <DialogFooter className="mt-4">
-              <Button variant="outline" className="rounded-xl" disabled={isDeleting}>Cancel</Button>
+              <DialogClose asChild>
+                <Button variant="outline" className="rounded-xl" disabled={isDeleting}>Cancel</Button>
+              </DialogClose>
               <Button variant="destructive" className="rounded-xl" onClick={handleDelete} disabled={isDeleting}>
                 {isDeleting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 Yes, delete it
