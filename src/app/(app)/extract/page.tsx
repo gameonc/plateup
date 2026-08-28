@@ -87,14 +87,14 @@ function ExtractRecipeContent() {
         body: JSON.stringify({ url: youtubeUrl })
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch video transcript. Make sure the video has captions.');
-      }
-
       const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to extract recipe from this video.');
+      }
       
       if (!data.transcript) {
-        throw new Error('Could not extract transcript from this video.');
+        throw new Error('Could not extract content from this video. Try a different cooking video.');
       }
 
       setThumbnailUrl(data.thumbnailUrl || `https://img.youtube.com/vi/${youtubeVideoId}/hqdefault.jpg`);
