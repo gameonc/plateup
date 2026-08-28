@@ -9,6 +9,8 @@ import {
 } from "lucide-react";
 import { useRecipes } from "@/hooks/useRecipes";
 import { useShoppingList } from "@/hooks/useShoppingList";
+import { OrderIngredientsButton } from "@/components/shopping/OrderIngredientsButton";
+import { AFFILIATE_DISCLOSURE_TEXT } from "@/lib/affiliate";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -270,21 +272,31 @@ export default function RecipeDetailPage() {
                 <StickyNote className="w-4 h-4 text-primary" />
                 Ingredients ({recipe.ingredients?.length || 0})
               </CardTitle>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={handleAddToList}
-                disabled={isAddingToList || !recipe.ingredients?.length}
-                className="h-8 px-2 text-xs font-semibold text-primary hover:bg-orange-50 hover:text-orange-700 rounded-lg"
-              >
-                {isAddingToList ? (
-                  <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
-                ) : (
-                  <ShoppingBag className="w-3.5 h-3.5 mr-1" />
-                )}
-                + List
-              </Button>
+              <div className="flex items-center gap-1.5">
+                <OrderIngredientsButton
+                  ingredients={recipe.ingredients || []}
+                  size="sm"
+                  variant="outline"
+                  label="Order"
+                  disabled={!recipe.ingredients?.length}
+                  className="h-8 px-2.5 text-xs font-semibold bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100 rounded-lg"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleAddToList}
+                  disabled={isAddingToList || !recipe.ingredients?.length}
+                  className="h-8 px-2 text-xs font-semibold text-primary hover:bg-orange-50 hover:text-orange-700 rounded-lg"
+                >
+                  {isAddingToList ? (
+                    <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                  ) : (
+                    <ShoppingBag className="w-3.5 h-3.5 mr-1" />
+                  )}
+                  + List
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="pt-4">
               <ul className="space-y-2">
@@ -308,6 +320,14 @@ export default function RecipeDetailPage() {
                   <p className="text-stone-400 text-sm italic py-2">No ingredients listed.</p>
                 )}
               </ul>
+
+              {recipe.ingredients && recipe.ingredients.length > 0 && (
+                <div className="pt-3 mt-3 border-t border-stone-100">
+                  <p className="text-[10px] text-stone-400 text-center leading-snug">
+                    {AFFILIATE_DISCLOSURE_TEXT}
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
           
@@ -379,6 +399,15 @@ export default function RecipeDetailPage() {
         </Dialog>
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 order-1 sm:order-2">
+          <OrderIngredientsButton
+            ingredients={recipe.ingredients || []}
+            size="lg"
+            variant="outline"
+            label="Order Ingredients"
+            disabled={!recipe.ingredients?.length}
+            className="w-full sm:w-auto rounded-xl border-emerald-300 bg-emerald-50/80 hover:bg-emerald-100 text-emerald-900 font-bold px-6 h-13 transition-all cursor-pointer shadow-xs"
+          />
+
           <Button
             type="button"
             variant="outline"
@@ -410,6 +439,15 @@ export default function RecipeDetailPage() {
           </Button>
         </div>
       </div>
+
+      {/* Affiliate Partner Disclosure */}
+      {recipe.ingredients && recipe.ingredients.length > 0 && (
+        <div className="pt-2 text-center sm:text-right">
+          <p className="text-[11px] text-stone-400">
+            {AFFILIATE_DISCLOSURE_TEXT}
+          </p>
+        </div>
+      )}
     </div>
   );
 }

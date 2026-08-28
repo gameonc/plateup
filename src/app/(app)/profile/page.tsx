@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { 
   User, 
   ChefHat, 
@@ -8,16 +9,21 @@ import {
   Loader2, 
   Check, 
   Calendar, 
-  Sparkles,
-  Sliders,
-  ShieldCheck,
-  Leaf,
-  Fish,
-  WheatOff,
-  MilkOff,
-  Flame,
-  Scale,
-  Ban
+  Sparkles, 
+  Sliders, 
+  ShieldCheck, 
+  Leaf, 
+  Fish, 
+  WheatOff, 
+  MilkOff, 
+  Flame, 
+  Scale, 
+  Ban,
+  Crown,
+  Zap,
+  ArrowRight,
+  CreditCard,
+  CheckCircle2
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
@@ -29,6 +35,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from '@/components/ui/toast';
 import { DIETARY_OPTIONS, type DietaryRestriction, type MealTime, type UserProfile, type UserPreferences } from '@/types';
 import { cn } from '@/lib/utils';
+import { getExtractionUsage, FREE_TIER_MONTHLY_LIMIT } from '@/lib/usage';
+import { PRO_MONTHLY_PRICE_USD } from '@/lib/stripe';
+import { ProBadge } from '@/components/monetization/ProBadge';
 
 function ProfileForm({
   profile,
@@ -55,6 +64,9 @@ function ProfileForm({
   );
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  const usage = getExtractionUsage(profile);
+  const isPro = usage.plan === 'pro';
 
   const toggleDietaryRestriction = (restriction: DietaryRestriction) => {
     setDietaryRestrictions((prev) => {
@@ -159,7 +171,7 @@ function ProfileForm({
           type="submit"
           disabled={isSaving}
           className={cn(
-            "bg-primary hover:bg-orange-700 text-primary-foreground font-semibold rounded-xl shadow-xs transition-all",
+            "bg-primary hover:bg-orange-700 text-primary-foreground font-semibold rounded-xl shadow-xs transition-all cursor-pointer",
             hasUnsavedChanges && "ring-2 ring-orange-400 ring-offset-2 animate-pulse"
           )}
         >
@@ -200,9 +212,13 @@ function ProfileForm({
             <div className="space-y-1 flex-1">
               <div className="flex items-center gap-2">
                 <h3 className="font-bold text-stone-900 text-lg">{displayName || 'Chef'}</h3>
-                <Badge variant="secondary" className="text-[10px] bg-orange-100 text-orange-900 font-semibold">
-                  <ShieldCheck className="w-3 h-3 mr-1" /> Active Member
-                </Badge>
+                {isPro ? (
+                  <ProBadge size="xs" variant="gradient" text="PlateUp Pro" />
+                ) : (
+                  <Badge variant="secondary" className="text-[10px] bg-orange-100 text-orange-900 font-semibold">
+                    <ShieldCheck className="w-3 h-3 mr-1" /> Active Member
+                  </Badge>
+                )}
               </div>
               <p className="text-xs text-stone-500">{userEmail || 'Logged in user'}</p>
               {profile?.createdAt && (
@@ -244,6 +260,152 @@ function ProfileForm({
               />
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Subscription & Plan Status Card */}
+      <Card className={cn(
+        "rounded-2xl shadow-xs overflow-hidden transition-all",
+        isPro 
+          ? "border-2 border-orange-300 bg-gradient-to-br from-orange-50/60 via-white to-amber-50/30" 
+          : "border-stone-200/80 bg-white"
+      )}>
+        <CardHeader className={cn(
+          "border-b pb-4 flex flex-row items-center justify-between",
+          isPro ? "bg-orange-50/80 border-orange-100" : "bg-stone-50/60 border-stone-100"
+        )}>
+          <div>
+            <CardTitle className="text-lg font-bold text-stone-900 flex items-center gap-2">
+              <CreditCard className={cn("w-5 h-5", isPro ? "text-primary" : "text-stone-600")} />
+              Subscription & Plan Status
+            </CardTitle>
+            <CardDescription className="text-xs text-stone-500">
+              Manage your billing tier, quotas, and AI extraction allowance
+            </CardDescription>
+          </div>
+
+          <div>
+            {isPro ? (
+              <ProBadge size="sm" variant="gradient" text="PlateUp Pro Active" />
+            ) : (
+              <Badge variant="outline" className="border-stone-300 bg-stone-100 text-stone-700 font-bold text-xs px-2.5 py-0.5 rounded-lg">
+                Free Plan
+              </Badge>
+            )}
+          </div>
+        </CardHeader>
+
+        <CardContent className="pt-6 space-y-6">
+          {isPro ? (
+            /* Pro Member View */
+            <div className="space-y-5">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-xl bg-white border border-orange-200/80 shadow-xs">
+                <div className="flex items-start gap-3.5">
+                  <div className="p-3 bg-gradient-to-br from-amber-500 to-orange-600 text-white rounded-2xl shadow-xs shrink-0">
+                    <Crown className="w-6 h-6 fill-amber-200 text-amber-200" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-extrabold text-stone-900 text-base">PlateUp Pro Member</h4>
+                      <Badge className="bg-emerald-100 text-emerald-900 font-bold text-[10px] px-2 py-0.5 rounded-md">
+                        <CheckCircle2 className="w-3 h-3 mr-1" /> Active
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-stone-600 mt-1">
+                      Plan: <strong>${PRO_MONTHLY_PRICE_USD.toFixed(2)}/mo Active</strong> • Renews monthly
+                    </p>
+                    {profile?.subscriptionId && (
+                      <p className="text-[11px] text-stone-400 font-mono mt-0.5">
+                        Subscription ID: {profile.subscriptionId}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <Link href="/pricing">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="rounded-xl border-orange-200 text-primary hover:bg-orange-50 font-bold text-xs"
+                  >
+                    View Plan Details
+                  </Button>
+                </Link>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <div className="p-3.5 rounded-xl border border-orange-100 bg-white/90">
+                  <div className="flex items-center gap-2 text-stone-900 font-bold text-xs mb-1">
+                    <Zap className="w-4 h-4 text-primary" />
+                    AI Extractions
+                  </div>
+                  <p className="text-sm font-extrabold text-primary">Unlimited AI Recipe Extractions</p>
+                  <p className="text-[11px] text-stone-500 mt-0.5">
+                    {usage.used} recipes extracted this month • No monthly caps
+                  </p>
+                </div>
+
+                <div className="p-3.5 rounded-xl border border-orange-100 bg-white/90">
+                  <div className="flex items-center gap-2 text-stone-900 font-bold text-xs mb-1">
+                    <Sparkles className="w-4 h-4 text-amber-500" />
+                    Premium Perks
+                  </div>
+                  <p className="text-sm font-extrabold text-stone-800">Priority AI Speed & 100% Ad-Free</p>
+                  <p className="text-[11px] text-stone-500 mt-0.5">
+                    Includes Pro Crown badge & priority customer support
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* Free Plan View */
+            <div className="space-y-5">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-xl bg-stone-50 border border-stone-200">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-bold text-stone-900 text-sm">Monthly Extraction Allowance</h4>
+                    <Badge variant="outline" className="border-stone-300 text-stone-600 font-semibold text-[10px]">
+                      5 / Month Free
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-stone-600">
+                    You have used <strong>{usage.used} / {FREE_TIER_MONTHLY_LIMIT} extractions</strong> this month ({usage.remaining} remaining).
+                  </p>
+                </div>
+
+                <Link href="/pricing" className="w-full sm:w-auto">
+                  <Button
+                    size="sm"
+                    className="w-full sm:w-auto bg-gradient-to-r from-primary to-orange-600 hover:from-orange-700 hover:to-amber-700 text-white font-bold text-xs rounded-xl shadow-xs gap-1.5 cursor-pointer"
+                  >
+                    <Crown className="w-3.5 h-3.5 fill-amber-200 text-amber-200" />
+                    Upgrade to Pro (${PRO_MONTHLY_PRICE_USD.toFixed(2)}/mo)
+                    <ArrowRight className="w-3.5 h-3.5 ml-1" />
+                  </Button>
+                </Link>
+              </div>
+
+              {/* Quota Progress Bar */}
+              <div className="space-y-1.5">
+                <div className="flex justify-between text-xs font-semibold text-stone-700">
+                  <span>Usage this month</span>
+                  <span>{usage.used} of {FREE_TIER_MONTHLY_LIMIT} used</span>
+                </div>
+                <div className="w-full h-2.5 bg-stone-100 rounded-full overflow-hidden border border-stone-200">
+                  <div
+                    className={cn(
+                      "h-full rounded-full transition-all",
+                      usage.isLimitReached ? "bg-red-500" : usage.used >= 4 ? "bg-amber-500" : "bg-primary"
+                    )}
+                    style={{ width: `${Math.min(100, (usage.used / FREE_TIER_MONTHLY_LIMIT) * 100)}%` }}
+                  />
+                </div>
+                <p className="text-[11px] text-stone-400">
+                  Resets on the 1st of next month. Discover recipes from TheMealDB are always free and unlimited.
+                </p>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -479,7 +641,7 @@ export default function ProfilePage() {
           </div>
           <div>
             <h1 className="text-3xl font-extrabold tracking-tight text-stone-900">Profile & Settings</h1>
-            <p className="text-xs text-stone-500 mt-0.5">Customize your dietary rules and smart meal planning</p>
+            <p className="text-xs text-stone-500 mt-0.5">Customize your dietary rules, subscriptions, and meal planning</p>
           </div>
         </div>
       </div>

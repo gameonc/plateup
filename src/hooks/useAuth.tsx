@@ -13,6 +13,7 @@ import {
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
+import { getCurrentMonthKey } from '@/lib/usage';
 
 interface AuthContextType {
   user: User | null;
@@ -49,6 +50,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         uid: user.uid,
         email: user.email,
         displayName: displayName || user.displayName || '',
+        plan: 'free',
+        extractionsThisMonth: 0,
+        extractionMonth: getCurrentMonthKey(),
         createdAt: serverTimestamp(),
         preferences: {
           repeatWindowDays: 5,

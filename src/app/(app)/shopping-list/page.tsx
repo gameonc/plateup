@@ -27,6 +27,8 @@ import { useShoppingList } from '@/hooks/useShoppingList';
 import { useMealPlan } from '@/hooks/useMealPlan';
 import { useRecipes } from '@/hooks/useRecipes';
 import { AddItemDialog } from '@/components/shopping/AddItemDialog';
+import { OrderIngredientsButton } from '@/components/shopping/OrderIngredientsButton';
+import { AFFILIATE_DISCLOSURE_TEXT } from '@/lib/affiliate';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -226,6 +228,13 @@ export default function ShoppingListPage() {
             )}
             Generate from Plan
           </Button>
+
+          <OrderIngredientsButton
+            ingredients={items}
+            disabled={items.length === 0}
+            variant="outline"
+            className="rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-300 font-semibold shadow-2xs"
+          />
 
           {checkedCount > 0 && (
             <Button
@@ -520,6 +529,15 @@ export default function ShoppingListPage() {
           }
         )}
       </div>
+
+      {/* Affiliate Partner Disclosure */}
+      {items.length > 0 && (
+        <div className="pt-2 text-center sm:text-right">
+          <p className="text-[11px] text-stone-400">
+            {AFFILIATE_DISCLOSURE_TEXT}
+          </p>
+        </div>
+      )}
     </div>
   );
 }

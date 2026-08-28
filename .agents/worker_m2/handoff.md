@@ -1,82 +1,30 @@
-# Handoff Report — Milestone 2: UI Polish, Warm Theming, Skeletons & Mobile Responsiveness
+# Milestone 2 Handoff Report: Freemium Tier System & Usage Tracking
 
 ## 1. Observation
-1. **Package.json and Lint Errors**:
-   - `package.json` line 7 originally had `"build": "next build"`.
-   - `npm run lint` initially reported 11 problems across `tests/tier2-boundary/f31-f40-boundary.test.ts`, `tests/tier4-scenarios/real-world-scenarios.test.ts`, `tests/tier2-boundary/f21-f30-boundary.test.ts`, and `tests/tier3-pairwise/pairwise-interactions.test.ts`.
-2. **Design Tokens (`src/app/globals.css`)**:
-   - `--primary` was originally `oklch(0.205 0 0)` (charcoal black), conflicting with the required warm food aesthetic.
-   - Blob animation classes (`animate-blob`, `animation-delay-2000`, `animation-delay-4000`) in `login/page.tsx` were missing corresponding CSS keyframes.
-3. **Landing Page (`src/app/page.tsx`)**:
-   - Previously contained a basic hero without conversion elements, an interactive UI preview card, testimonials, or FAQ accordion.
-4. **Login Page (`src/app/login/page.tsx`)**:
-   - Lacked a password visibility toggle (Eye/EyeOff), inline validation feedback before submitting, and friendly error alert cards.
-5. **Skeleton Loaders (`src/components/ui/skeleton.tsx`)**:
-   - Skeleton loader primitives did not exist; `/dashboard`, `/recipes`, `/recipes/[id]`, and `/meal-plan` previously rendered spinners or empty cards causing layout shifts (CLS).
-6. **Mobile Meal Planning (`src/app/(app)/meal-plan/page.tsx`)**:
-   - Rendered 21 stacked cards in a single column on mobile (< md), requiring over 3,000px of scrolling.
-7. **Verification Commands Output**:
-   - `npx tsc --noEmit` exited with code 0 (0 errors).
-   - `npm run lint` exited with code 0 (0 errors, 0 warnings).
-   - `npm run build` (`next build --webpack`) exited with code 0 in 2.5s.
-   - `npm test` exited with code 0: 598 / 598 tests passed (100% across Tiers 1-4 and Challenger suites).
+- **`src/types/index.ts`**: Extended `UserProfile` interface with `plan?: SubscriptionPlan`, `extractionsThisMonth?: number`, `extractionMonth?: string`, `subscriptionId?: string`, `subscriptionStatus?: string`. Exported `SubscriptionPlan` ('free' | 'pro') and `FREE_TIER_MONTHLY_LIMIT = 5`.
+- **`src/lib/usage.ts`**: Implemented `getCurrentMonthKey(date?: Date)` (generating `YYYY-MM`), `getExtractionUsage(profile, date)` (computing used count, remaining quota, limit, limit reached state, and automatic calendar month reset), and `recordExtractionUsage(userId, date)` (using Firestore `runTransaction` to atomically increment extraction count and reset on new months).
+- **`src/hooks/useProfile.ts`**: Updated Firestore snapshot listener and default fallback profile to map `plan`, `extractionsThisMonth`, `extractionMonth`, `subscriptionId`, and `subscriptionStatus`.
+- **`src/hooks/useUsage.ts`**: Implemented custom hook exposing `plan`, `extractionsThisMonth`, `used`, `limit`, `remaining`, `isLimitReached`, `loading`, `recordUsage`, and `profile`.
+- **`src/hooks/useAuth.tsx`**: Updated `createUserProfile` to initialize new Firestore user documents with `plan: 'free'`, `extractionsThisMonth: 0`, and `extractionMonth: getCurrentMonthKey()`.
+- **`src/components/monetization/UpgradePrompt.tsx`**: Created an encouraging, friendly upgrade banner/card component highlighting Pro benefits (unlimited recipe extractions, smart meal planning, grocery ordering, priority AI) and linking directly to `/pricing`.
+- **`src/app/(app)/extract/page.tsx`**: Integrated `useUsage`, added quota display ("{remaining} of 5 free extractions remaining this month" or "PlateUp Pro: Unlimited Extractions"), gated extraction actions behind `<UpgradePrompt />` when free users reach the 5-extraction limit, and hooked `recordUsage()` into successful YouTube and Photo extractions.
+- **`src/app/(app)/discover/page.tsx`**: Verified to remain completely ungated and free for all users browsing and saving TheMealDB recipes.
+- **`tests/unit-usage-m2.test.ts`**: Added 14 unit tests validating month key formatting, usage calculations, boundary conditions, free vs pro tier limits, and calendar month rollovers.
 
 ## 2. Logic Chain
-1. **Build Configuration and Lint Cleanliness**:
-   - Updating `package.json` to `"build": "next build --webpack"` directly satisfies Scope Item 1.
-   - Removing unused variables and imports across test files resolved all lint warnings, achieving zero warnings on `npm run lint`.
-2. **Warm Theme Tokens**:
-   - Setting `--primary: oklch(0.62 0.21 42)` (warm terracotta/burnt orange), `--primary-foreground: oklch(0.99 0 0)`, `--secondary: oklch(0.96 0.03 75)` (warm cream), `--accent: oklch(0.94 0.04 70)`, and `--ring: oklch(0.65 0.18 45)` unifies the design system across shadcn primitives. Adding `@keyframes blob` enables smooth ambient background motion in `login/page.tsx`.
-3. **Conversion Landing Page**:
-   - Implementing an interactive UI preview card showcasing recipe extraction metrics, 4 structured feature highlight cards (AI YouTube Extraction, Food Photo Recognition, Smart Weekly Planner, Intelligent Grocery List), social proof testimonials, and an interactive FAQ accordion fulfills Requirement R2 and passes all F-30 feature assertions.
-4. **Auth Page Polish**:
-   - Adding stateful password visibility toggles (`Eye` / `EyeOff`), client-side email/password format validation with `AlertCircle` alert banners, and warm card styling provides an accessible, friendly login experience.
-5. **Zero Layout Shift via Skeletons**:
-   - Creating `src/components/ui/skeleton.tsx` with `DashboardSkeleton`, `RecipeCardSkeleton`, `RecipeGridSkeleton`, `RecipeDetailSkeleton`, and `MealPlanSkeleton` (with `aria-busy="true"` and `animate-pulse`) and mounting them in each route's loading state eliminates CLS.
-6. **Mobile Meal Planning Optimization**:
-   - Introducing a 7-day segmented tab switcher on `< md` viewports (`block md:hidden`) isolates the 3 meal slots for the active day, while desktop viewports (`hidden md:grid md:grid-cols-7`) maintain the full 21-slot planner.
-7. **Micro-Interactions**:
-   - Wiring `@base-ui/react/toast` via `toast.create` provides immediate celebratory toast feedback when rating recipes, saving recipes, marking recipes as cooked ("I Made This!"), and auto-filling meal plans.
+1. *Requirement R2* mandates tracking monthly AI extraction counts in Firestore, granting free users 5 extractions per month, resetting counts monthly by calendar month, blocking free users with an encouraging upgrade prompt upon reaching the limit, and granting Pro users unlimited extractions while leaving Discover completely ungated.
+2. *State Design*: Storing `extractionMonth: "YYYY-MM"` alongside `extractionsThisMonth: number` in the user document allows stateless and atomic verification of whether the user is in the current month or if a new calendar month has started without requiring scheduled cron jobs.
+3. *Usage Calculator*: `getExtractionUsage` reads `profile.extractionMonth`. If the month does not match `getCurrentMonthKey()`, `used` is evaluated as `0` and `remaining` as `5`. If `profile.plan === 'pro'`, `limit` and `remaining` evaluate to `Infinity` and `isLimitReached` to `false`.
+4. *Atomic Counter*: `recordExtractionUsage` uses Firestore `runTransaction` to safely prevent race conditions. If the recorded month matches the current month, it increments the count by 1; otherwise, it resets `extractionsThisMonth` to `1` with the new `extractionMonth`.
+5. *UX & Integration*: The Extract page displays the user's remaining quota in real time via snapshot subscription in `useProfile` / `useUsage`. If a free tier user exhausts their 5 extractions, the extract inputs/actions are replaced with `<UpgradePrompt />` directing them to `/pricing`.
 
 ## 3. Caveats
-- No caveats. All changes strictly follow project architecture guidelines and preserve full backward compatibility with the test environment.
+- No caveats. All Firestore transaction logic handles missing documents, existing documents, and month transitions safely. Offline and unit testing environments operate cleanly.
 
 ## 4. Conclusion
-Milestone 2 is 100% complete and fully verified. The UI now features a warm terracotta/amber theme, zero layout shifts with comprehensive skeleton screens, an interactive landing page, an optimized mobile meal planning experience, and zero TypeScript, lint, build, or test errors.
+Milestone 2 is complete, fully implemented, verified, and adheres to all interface contracts and requirements.
 
 ## 5. Verification Method
-To independently verify Milestone 2:
-
-1. **TypeScript Type Safety**:
-   ```bash
-   npx tsc --noEmit
-   ```
-   *Expected: Exit code 0 with 0 errors.*
-
-2. **Lint Cleanliness**:
-   ```bash
-   npm run lint
-   ```
-   *Expected: Exit code 0 with 0 errors and 0 warnings.*
-
-3. **Production Webpack Build**:
-   ```bash
-   npm run build
-   ```
-   *Expected: `next build --webpack` completes successfully with all routes generated.*
-
-4. **Comprehensive Test Suite**:
-   ```bash
-   npm test
-   ```
-   *Expected: 598 / 598 tests pass (100%).*
-
-5. **Files to Inspect**:
-   - `src/app/globals.css` (OKLCH warm theme variables & blob keyframes)
-   - `src/app/page.tsx` (Landing page hero, preview card, features, FAQ)
-   - `src/app/login/page.tsx` (Password toggle, validation, friendly alerts)
-   - `src/components/ui/skeleton.tsx` (Skeleton components)
-   - `src/app/(app)/dashboard/page.tsx` (Dashboard skeleton & warm cards)
-   - `src/app/(app)/recipes/page.tsx` (Recipe grid skeleton)
-   - `src/app/(app)/recipes/[id]/page.tsx` (Detail skeleton & toast feedback)
-   - `src/app/(app)/meal-plan/page.tsx` (Mobile day selector & skeleton)
+- **TypeScript Check**: Run `npx tsc --noEmit` -> 0 errors.
+- **Unit Tests**: Run `node --experimental-strip-types tests/unit-usage-m2.test.ts` -> 14/14 tests pass.
+- **Production Build**: Run `npm run build` -> Next.js 16 build compiles and generates all static/dynamic routes successfully.

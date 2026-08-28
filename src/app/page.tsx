@@ -19,7 +19,8 @@ import {
   ShieldCheck, 
   ChevronDown, 
   Users, 
-  Utensils 
+  Utensils,
+  Crown
 } from "lucide-react";
 
 export default function LandingPage() {
@@ -37,6 +38,10 @@ export default function LandingPage() {
     {
       q: "How does AI recipe extraction work?",
       a: "Powered by Google Gemini 2.5 Flash, PlateUp reads video transcripts and analyzes food images to extract clean, structured recipes with exact measurements and step-by-step instructions in seconds.",
+    },
+    {
+      q: "What does PlateUp Pro include?",
+      a: "PlateUp Pro unlocks unlimited YouTube and food photo recipe extractions, priority AI processing speed, and advanced meal planning features for just $4.99/month.",
     },
     {
       q: "Can PlateUp accommodate my dietary preferences?",
@@ -63,7 +68,13 @@ export default function LandingPage() {
           <span className="font-bold text-xl tracking-tight text-stone-900">PlateUp</span>
         </div>
 
-        <div className="flex items-center gap-3 sm:gap-4">
+        <div className="flex items-center gap-3 sm:gap-5">
+          <Link
+            href="/pricing"
+            className="text-sm font-semibold text-stone-600 hover:text-primary transition-colors"
+          >
+            Pricing
+          </Link>
           <Link href="/login">
             <Button variant="ghost" className="text-stone-700 hover:text-primary font-medium">
               Log In
@@ -110,9 +121,9 @@ export default function LandingPage() {
                 Get Started Free <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
             </Link>
-            <Link href="/login" className="w-full sm:w-auto">
+            <Link href="/pricing" className="w-full sm:w-auto">
               <Button variant="outline" size="lg" className="w-full sm:w-auto h-13 px-8 rounded-xl text-base font-semibold border-stone-300 text-stone-700 hover:bg-stone-100 hover:text-stone-900 transition-all">
-                Explore Recipes
+                View Pricing & Plans
               </Button>
             </Link>
           </div>
@@ -121,7 +132,7 @@ export default function LandingPage() {
           <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 text-stone-600 text-sm font-medium mb-12">
             <div className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-full border border-stone-200 shadow-xs">
               <ShieldCheck className="w-4 h-4 text-emerald-600" />
-              <span>100% Free</span>
+              <span>Free Tier Available</span>
             </div>
             <div className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-full border border-stone-200 shadow-xs">
               <Sparkles className="w-4 h-4 text-orange-600" />
@@ -129,7 +140,7 @@ export default function LandingPage() {
             </div>
             <div className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-full border border-stone-200 shadow-xs">
               <Flame className="w-4 h-4 text-red-500" />
-              <span>No Credit Card Required</span>
+              <span>No Credit Card Required to Start</span>
             </div>
           </div>
 
@@ -283,6 +294,36 @@ export default function LandingPage() {
                   </CardDescription>
                 </CardContent>
               </Card>
+            </div>
+          </div>
+        </section>
+
+        {/* Pro Tier Upgrade Showcase Section */}
+        <section className="px-4 sm:px-6 lg:px-8 py-16 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 border-b border-orange-200/80">
+          <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-8">
+            <div className="space-y-3 text-left">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-100 text-orange-800 text-xs font-bold uppercase tracking-wider">
+                <Crown className="w-3.5 h-3.5 text-amber-600 fill-amber-500" />
+                <span>PlateUp Pro Experience</span>
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-stone-900 tracking-tight">
+                Unlock unlimited AI extractions & priority culinary tools
+              </h2>
+              <p className="text-stone-600 text-sm sm:text-base max-w-2xl leading-relaxed">
+                Supercharge your kitchen workflow with unlimited YouTube & photo recipe extractions, advanced meal planner intelligence, and rapid priority processing for just $4.99/month.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto shrink-0">
+              <Link href="/pricing" className="w-full sm:w-auto">
+                <Button
+                  size="lg"
+                  className="w-full bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-bold px-6 py-2.5 rounded-xl shadow-md transition-all hover:scale-105 active:scale-95 gap-2 cursor-pointer"
+                >
+                  <Crown className="w-4 h-4 text-amber-200 fill-amber-300" />
+                  Explore Pro Plans
+                  <ArrowRight className="w-4 h-4 ml-1" />
+                </Button>
+              </Link>
             </div>
           </div>
         </section>
@@ -471,6 +512,7 @@ export default function LandingPage() {
           </div>
 
           <div className="flex items-center gap-6 text-sm text-stone-500">
+            <Link href="/pricing" className="hover:text-primary transition-colors">Pricing</Link>
             <Link href="/login" className="hover:text-primary transition-colors">Sign In</Link>
             <Link href="/login" className="hover:text-primary transition-colors">Sign Up</Link>
             <span className="flex items-center gap-1 text-stone-400">

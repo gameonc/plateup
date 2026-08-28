@@ -3,8 +3,11 @@
 import React, { useState, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useRecipes } from '@/hooks/useRecipes';
+import { useUsage } from '@/hooks/useUsage';
 import { extractRecipeFromYouTube, extractRecipeFromImage, ExtractedRecipe } from '@/lib/extract-recipe';
 import { RecipePreview } from '@/components/recipe/RecipePreview';
+import { UpgradePrompt } from '@/components/monetization/UpgradePrompt';
+import { ProBadge } from '@/components/monetization/ProBadge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,19 +20,19 @@ import {
   Loader2, 
   Upload, 
   ImageIcon, 
-  AlertCircle 
+  AlertCircle
 } from 'lucide-react';
 
 const YOUTUBE_REGEX = /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([-\w]{11})/;
 
 function ExtractRecipeContent() {
   const { addRecipe } = useRecipes();
+  const { plan, remaining, isLimitReached, recordUsage } = useUsage();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get('tab');
 
   const [selectedTab, setSelectedTab] = useState<'youtube' | 'photo' | null>(null);
   const activeTab = selectedTab ?? (tabParam === 'photo' ? 'photo' : 'youtube');
-  
 
   // YouTube State
   const [youtubeUrl, setYoutubeUrl] = useState('');
@@ -73,6 +76,15 @@ function ExtractRecipeContent() {
 
   const handleExtractYoutube = async () => {
     if (!youtubeUrl || !youtubeVideoId) return;
+
+    if (isLimitReached && plan !== 'pro') {
+      toast.create({
+        title: "Ready for More Recipes? ✨",
+        description: "You've used your 5 free extractions this month. Upgrade to PlateUp Pro for unlimited recipe extractions anytime!",
+        type: "warning",
+      });
+      return;
+    }
     
     setIsExtractingYoutube(true);
     setYoutubeError(null);
@@ -90,6 +102,7 @@ function ExtractRecipeContent() {
         setIsWatchingVideo(true)
       );
 
+      await recordUsage();
       setExtractedRecipe(recipe);
       
     } catch (error) {
@@ -119,6 +132,15 @@ function ExtractRecipeContent() {
   const handleExtractImage = async () => {
     if (!selectedImage || !imageFile) return;
 
+    if (isLimitReached && plan !== 'pro') {
+      toast.create({
+        title: "Ready for More Recipes? ✨",
+        description: "You've used your 5 free extractions this month. Upgrade to PlateUp Pro for unlimited recipe extractions anytime!",
+        type: "warning",
+      });
+      return;
+    }
+
     setIsExtractingImage(true);
     setImageError(null);
     setExtractedRecipe(null);
@@ -135,6 +157,7 @@ function ExtractRecipeContent() {
       }
 
       const recipe = await extractRecipeFromImage(base64Data, mimeType);
+      await recordUsage();
       setExtractedRecipe(recipe);
       
     } catch (error) {
@@ -199,192 +222,81 @@ function ExtractRecipeContent() {
 
   return (
     <div className="container max-w-4xl py-8 px-4 sm:px-6 lg:px-8 mx-auto">
-      <div className="flex items-center gap-3 mb-8">
-        <div className="bg-orange-100 p-2 rounded-xl">
-          <Sparkles className="h-6 w-6 text-orange-600" />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+        <div className="flex items-center gap-3">
+          <div className="bg-orange-100 p-2 rounded-xl">
+            <Sparkles className="h-6 w-6 text-orange-600" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Extract Recipe</h1>
+            <p className="text-sm text-slate-500 mt-0.5">Turn any YouTube cooking video or food photo into a recipe</p>
+          </div>
         </div>
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Extract Recipe</h1>
+
+        {plan === 'pro' ? (
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-amber-500/15 via-orange-500/15 to-amber-500/15 border border-amber-300 text-amber-900 text-xs sm:text-sm font-semibold shadow-xs">
+            <ProBadge size="xs" variant="gradient" />
+            <span>Unlimited AI Extractions</span>
+          </div>
+        ) : (
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-slate-700 text-xs sm:text-sm font-medium">
+            <Sparkles className="w-3.5 h-3.5 text-orange-600 shrink-0" />
+            <span>{remaining} of 5 free extractions remaining this month</span>
+          </div>
+        )}
       </div>
 
       {!extractedRecipe ? (
-        <Tabs value={activeTab} onValueChange={(val) => setSelectedTab(val as 'youtube' | 'photo')} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-8 bg-slate-100 p-1 rounded-xl">
-            <TabsTrigger 
-              value="youtube" 
-              className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-sm py-2.5 transition-all"
-            >
-              <CirclePlay className="w-4 h-4 mr-2" />
-              YouTube Video
-            </TabsTrigger>
-            <TabsTrigger 
-              value="photo"
-              className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-sm py-2.5 transition-all"
-            >
-              <Camera className="w-4 h-4 mr-2" />
-              Photo / Camera
-            </TabsTrigger>
-          </TabsList>
+        isLimitReached && plan !== 'pro' ? (
+          <UpgradePrompt
+            title="Unlock Unlimited Extractions with PlateUp Pro"
+            description="You've made great use of your 5 free AI extractions this month. Upgrade to PlateUp Pro for unlimited recipe extractions and smart meal planning tools!"
+          />
+        ) : (
+          <Tabs value={activeTab} onValueChange={(val) => setSelectedTab(val as 'youtube' | 'photo')} className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-8 bg-slate-100 p-1 rounded-xl">
+              <TabsTrigger 
+                value="youtube" 
+                className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-sm py-2.5 transition-all"
+              >
+                <CirclePlay className="w-4 h-4 mr-2" />
+                YouTube Video
+              </TabsTrigger>
+              <TabsTrigger 
+                value="photo" 
+                className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-sm py-2.5 transition-all"
+              >
+                <Camera className="w-4 h-4 mr-2" />
+                Photo / Camera
+              </TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="youtube" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
-            <Card className="border-slate-200 shadow-sm">
-              <CardContent className="pt-6">
-                <div className="flex flex-col gap-4">
-                  <div className="space-y-2">
-                    <label htmlFor="youtube-url" className="text-sm font-medium text-slate-700">
-                      YouTube Cooking Video URL
-                    </label>
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      <div className="relative flex-1">
-                        <CirclePlay className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-                        <Input
-                          id="youtube-url"
-                          placeholder="Paste YouTube cooking video URL..."
-                          value={youtubeUrl}
-                          onChange={handleYoutubeUrlChange}
-                          className="pl-9 bg-slate-50 border-slate-200 focus-visible:ring-orange-500"
-                          disabled={isExtractingYoutube}
-                        />
-                      </div>
-                      <Button 
-                        onClick={handleExtractYoutube} 
-                        disabled={!youtubeUrl || !youtubeVideoId || isExtractingYoutube}
-                        className="bg-orange-600 hover:bg-orange-700 text-white min-w-[140px]"
-                      >
-                        {isExtractingYoutube ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Analyzing...
-                          </>
-                        ) : (
-                          <>
-                            <Sparkles className="mr-2 h-4 w-4" />
-                            Extract Recipe
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                    {youtubeError && (
-                      <p className="text-sm text-red-500 flex items-center mt-2">
-                        <AlertCircle className="h-4 w-4 mr-1" />
-                        {youtubeError}
-                      </p>
-                    )}
-                  </div>
-
-                  {youtubeVideoId && !isExtractingYoutube && !youtubeError && (
-                    <div className="mt-4 rounded-xl overflow-hidden border border-slate-200 bg-slate-50 relative aspect-video w-full max-w-lg mx-auto">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img 
-                        src={`https://img.youtube.com/vi/${youtubeVideoId}/hqdefault.jpg`}
-                        alt="Video thumbnail"
-                        className="object-cover w-full h-full"
-                      />
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                        <div className="bg-red-600 text-white rounded-full p-3 shadow-lg">
-                          <CirclePlay className="h-8 w-8" />
+            <TabsContent value="youtube" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
+              <Card className="border-slate-200 shadow-sm">
+                <CardContent className="pt-6">
+                  <div className="flex flex-col gap-4">
+                    <div className="space-y-2">
+                      <label htmlFor="youtube-url" className="text-sm font-medium text-slate-700">
+                        YouTube Cooking Video URL
+                      </label>
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        <div className="relative flex-1">
+                          <CirclePlay className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                          <Input
+                            id="youtube-url"
+                            placeholder="Paste YouTube cooking video URL..."
+                            value={youtubeUrl}
+                            onChange={handleYoutubeUrlChange}
+                            className="pl-9 bg-slate-50 border-slate-200 focus-visible:ring-orange-500"
+                            disabled={isExtractingYoutube}
+                          />
                         </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {isExtractingYoutube && (
-                    <div className="mt-8 flex flex-col items-center justify-center py-12 text-center">
-                      <div className="relative mb-4">
-                        <div className="absolute inset-0 bg-orange-200 rounded-full animate-ping opacity-75"></div>
-                        <div className="relative bg-orange-100 text-orange-600 p-4 rounded-full">
-                          <Sparkles className="h-8 w-8 animate-pulse" />
-                        </div>
-                      </div>
-                      <h3 className="text-lg font-medium text-slate-800">
-                        {isWatchingVideo ? 'AI is watching the video...' : 'AI is analyzing the video...'}
-                      </h3>
-                      <p className="text-slate-500 text-sm mt-2 max-w-sm">
-                        {isWatchingVideo
-                          ? 'No ingredient list in the description, so we\'re watching the video itself. This takes a little longer.'
-                          : 'This usually takes a few seconds as we pull the ingredients and steps.'}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="photo" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
-            <Card className="border-slate-200 shadow-sm">
-              <CardContent className="pt-6">
-                <div className="flex flex-col gap-6">
-                  
-                  {!selectedImage ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {/* Upload Area */}
-                      <div 
-                        className="border-2 border-dashed border-slate-300 rounded-xl p-8 flex flex-col items-center justify-center gap-3 bg-slate-50 hover:bg-slate-100 hover:border-orange-300 transition-colors cursor-pointer"
-                        onClick={() => fileInputRef.current?.click()}
-                      >
-                        <div className="bg-white p-3 rounded-full shadow-sm">
-                          <Upload className="h-6 w-6 text-slate-600" />
-                        </div>
-                        <div className="text-center">
-                          <p className="text-sm font-medium text-slate-800">Upload Photo</p>
-                          <p className="text-xs text-slate-500 mt-1">Drag & drop or click to browse</p>
-                        </div>
-                        <input 
-                          type="file" 
-                          accept="image/*" 
-                          className="hidden" 
-                          ref={fileInputRef}
-                          onChange={handleImageSelect}
-                        />
-                      </div>
-
-                      {/* Camera Area */}
-                      <div 
-                        className="border-2 border-dashed border-slate-300 rounded-xl p-8 flex flex-col items-center justify-center gap-3 bg-slate-50 hover:bg-slate-100 hover:border-orange-300 transition-colors cursor-pointer"
-                        onClick={() => cameraInputRef.current?.click()}
-                      >
-                        <div className="bg-white p-3 rounded-full shadow-sm">
-                          <Camera className="h-6 w-6 text-slate-600" />
-                        </div>
-                        <div className="text-center">
-                          <p className="text-sm font-medium text-slate-800">Take Photo</p>
-                          <p className="text-xs text-slate-500 mt-1">Use your device camera</p>
-                        </div>
-                        <input 
-                          type="file" 
-                          accept="image/*" 
-                          capture="environment"
-                          className="hidden" 
-                          ref={cameraInputRef}
-                          onChange={handleImageSelect}
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center">
-                      <div className="relative rounded-xl overflow-hidden border border-slate-200 mb-6 max-w-md w-full aspect-[4/3]">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img 
-                          src={selectedImage} 
-                          alt="Selected food or recipe" 
-                          className="object-cover w-full h-full"
-                        />
-                      </div>
-                      <div className="flex gap-3 w-full max-w-md">
                         <Button 
-                          variant="outline" 
-                          onClick={() => { setSelectedImage(null); setImageFile(null); }}
-                          disabled={isExtractingImage}
-                          className="flex-1"
+                          onClick={handleExtractYoutube} 
+                          disabled={!youtubeUrl || !youtubeVideoId || isExtractingYoutube}
+                          className="bg-orange-600 hover:bg-orange-700 text-white min-w-[140px]"
                         >
-                          Cancel
-                        </Button>
-                        <Button 
-                          onClick={handleExtractImage} 
-                          disabled={isExtractingImage}
-                          className="flex-1 bg-orange-600 hover:bg-orange-700 text-white"
-                        >
-                          {isExtractingImage ? (
+                          {isExtractingYoutube ? (
                             <>
                               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                               Analyzing...
@@ -397,36 +309,171 @@ function ExtractRecipeContent() {
                           )}
                         </Button>
                       </div>
+                      {youtubeError && (
+                        <p className="text-sm text-red-500 flex items-center mt-2">
+                          <AlertCircle className="h-4 w-4 mr-1" />
+                          {youtubeError}
+                        </p>
+                      )}
                     </div>
-                  )}
 
-                  {imageError && (
-                    <p className="text-sm text-red-500 flex items-center justify-center">
-                      <AlertCircle className="h-4 w-4 mr-1" />
-                      {imageError}
-                    </p>
-                  )}
-
-                  {isExtractingImage && (
-                    <div className="flex flex-col items-center justify-center py-8 text-center">
-                      <div className="relative mb-4">
-                        <div className="absolute inset-0 bg-orange-200 rounded-full animate-ping opacity-75"></div>
-                        <div className="relative bg-orange-100 text-orange-600 p-4 rounded-full">
-                          <ImageIcon className="h-8 w-8 animate-pulse" />
+                    {youtubeVideoId && !isExtractingYoutube && !youtubeError && (
+                      <div className="mt-4 rounded-xl overflow-hidden border border-slate-200 bg-slate-50 relative aspect-video w-full max-w-lg mx-auto">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img 
+                          src={`https://img.youtube.com/vi/${youtubeVideoId}/hqdefault.jpg`}
+                          alt="Video thumbnail"
+                          className="object-cover w-full h-full"
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                          <div className="bg-red-600 text-white rounded-full p-3 shadow-lg">
+                            <CirclePlay className="h-8 w-8" />
+                          </div>
                         </div>
                       </div>
-                      <h3 className="text-lg font-medium text-slate-800">AI is identifying the dish...</h3>
-                      <p className="text-slate-500 text-sm mt-2 max-w-sm">
-                        This takes a few seconds while we analyze the image and generate the recipe.
-                      </p>
-                    </div>
-                  )}
+                    )}
 
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                    {isExtractingYoutube && (
+                      <div className="mt-8 flex flex-col items-center justify-center py-12 text-center">
+                        <div className="relative mb-4">
+                          <div className="absolute inset-0 bg-orange-200 rounded-full animate-ping opacity-75"></div>
+                          <div className="relative bg-orange-100 text-orange-600 p-4 rounded-full">
+                            <Sparkles className="h-8 w-8 animate-pulse" />
+                          </div>
+                        </div>
+                        <h3 className="text-lg font-medium text-slate-800">
+                          {isWatchingVideo ? 'AI is watching the video...' : 'AI is analyzing the video...'}
+                        </h3>
+                        <p className="text-slate-500 text-sm mt-2 max-w-sm">
+                          {isWatchingVideo
+                            ? 'No ingredient list in the description, so we\'re watching the video itself. This takes a little longer.'
+                            : 'This usually takes a few seconds as we pull the ingredients and steps.'}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="photo" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
+              <Card className="border-slate-200 shadow-sm">
+                <CardContent className="pt-6">
+                  <div className="flex flex-col gap-6">
+                    
+                    {!selectedImage ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {/* Upload Area */}
+                        <div 
+                          className="border-2 border-dashed border-slate-300 rounded-xl p-8 flex flex-col items-center justify-center gap-3 bg-slate-50 hover:bg-slate-100 hover:border-orange-300 transition-colors cursor-pointer"
+                          onClick={() => fileInputRef.current?.click()}
+                        >
+                          <div className="bg-white p-3 rounded-full shadow-sm">
+                            <Upload className="h-6 w-6 text-slate-600" />
+                          </div>
+                          <div className="text-center">
+                            <p className="text-sm font-medium text-slate-800">Upload Photo</p>
+                            <p className="text-xs text-slate-500 mt-1">Drag & drop or click to browse</p>
+                          </div>
+                          <input 
+                            type="file" 
+                            accept="image/*" 
+                            className="hidden" 
+                            ref={fileInputRef}
+                            onChange={handleImageSelect}
+                          />
+                        </div>
+
+                        {/* Camera Area */}
+                        <div 
+                          className="border-2 border-dashed border-slate-300 rounded-xl p-8 flex flex-col items-center justify-center gap-3 bg-slate-50 hover:bg-slate-100 hover:border-orange-300 transition-colors cursor-pointer"
+                          onClick={() => cameraInputRef.current?.click()}
+                        >
+                          <div className="bg-white p-3 rounded-full shadow-sm">
+                            <Camera className="h-6 w-6 text-slate-600" />
+                          </div>
+                          <div className="text-center">
+                            <p className="text-sm font-medium text-slate-800">Take Photo</p>
+                            <p className="text-xs text-slate-500 mt-1">Use your device camera</p>
+                          </div>
+                          <input 
+                            type="file" 
+                            accept="image/*" 
+                            capture="environment"
+                            className="hidden" 
+                            ref={cameraInputRef}
+                            onChange={handleImageSelect}
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center">
+                        <div className="relative rounded-xl overflow-hidden border border-slate-200 mb-6 max-w-md w-full aspect-[4/3]">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img 
+                            src={selectedImage} 
+                            alt="Selected food or recipe" 
+                            className="object-cover w-full h-full"
+                          />
+                        </div>
+                        <div className="flex gap-3 w-full max-w-md">
+                          <Button 
+                            variant="outline" 
+                            onClick={() => { setSelectedImage(null); setImageFile(null); }}
+                            disabled={isExtractingImage}
+                            className="flex-1"
+                          >
+                            Cancel
+                          </Button>
+                          <Button 
+                            onClick={handleExtractImage} 
+                            disabled={isExtractingImage}
+                            className="flex-1 bg-orange-600 hover:bg-orange-700 text-white"
+                          >
+                            {isExtractingImage ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Analyzing...
+                              </>
+                            ) : (
+                              <>
+                                <Sparkles className="mr-2 h-4 w-4" />
+                                Extract Recipe
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {imageError && (
+                      <p className="text-sm text-red-500 flex items-center justify-center">
+                        <AlertCircle className="h-4 w-4 mr-1" />
+                        {imageError}
+                      </p>
+                    )}
+
+                    {isExtractingImage && (
+                      <div className="flex flex-col items-center justify-center py-8 text-center">
+                        <div className="relative mb-4">
+                          <div className="absolute inset-0 bg-orange-200 rounded-full animate-ping opacity-75"></div>
+                          <div className="relative bg-orange-100 text-orange-600 p-4 rounded-full">
+                            <ImageIcon className="h-8 w-8 animate-pulse" />
+                          </div>
+                        </div>
+                        <h3 className="text-lg font-medium text-slate-800">AI is identifying the dish...</h3>
+                        <p className="text-slate-500 text-sm mt-2 max-w-sm">
+                          This takes a few seconds while we analyze the image and generate the recipe.
+                        </p>
+                      </div>
+                    )}
+
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        )
       ) : (
         <div className="space-y-6">
           <div className="flex items-center justify-between">

@@ -1,54 +1,67 @@
-# BRIEFING — 2026-08-27T20:57:00Z
+# BRIEFING — 2026-08-28T12:28:56Z
 
 ## Mission
-Implement Milestone 4: Dietary Preferences & Recipe Filtering (R4) of PlateUp.
+Milestone 4: Navigation, Badges & UI Integration (ProBadge, Navbar Pro crown & Pricing link, Landing Page pricing links & CTA, and copy review for upgrade prompts).
 
 ## 🔒 My Identity
-- Archetype: worker
+- Archetype: worker_m4
 - Roles: implementer, qa, specialist
-- Working directory: /Users/CLD/.gemini/antigravity/scratch/plateup/.agents/worker_m4
-- Original parent: cbae9455-8ffc-4ff8-8208-fed9d1e4a46a
-- Milestone: Milestone 4 (Dietary Preferences & Filtering - R4)
+- Working directory: /Users/CLD/.gemini/antigravity/scratch/plateup/.agents/worker_m4/
+- Original parent: 3ea14768-fe53-4f59-a65e-376b7022d92b
+- Milestone: Milestone 4: Navigation, Badges & UI Integration
 
 ## 🔒 Key Constraints
-- Deliver genuine, full logic without cheating or hardcoded verification strings.
-- Follow existing codebase structure (Next.js 16 App Router, Tailwind v4, Lucide icons, Firebase Firestore).
-- Zero TypeScript errors (`npx tsc --noEmit`), Zero ESLint violations (`npm run lint`), Zero build failures (`npm run build`), 100% test pass rate (`npm test`).
+- Genuine implementation only, no cheating / hardcoded test results.
+- Exclusive file ownership:
+  - `src/components/monetization/ProBadge.tsx`
+  - `src/components/layout/Navbar.tsx`
+  - `src/app/page.tsx`
+  - Upgrade prompt review: `UpgradePrompt.tsx`, `extract/page.tsx`, `profile/page.tsx`
+- Must pass `npx tsc --noEmit`, `npm run build`, `npm test`.
 
 ## Current Parent
-- Conversation ID: cbae9455-8ffc-4ff8-8208-fed9d1e4a46a
-- Updated: 2026-08-27T20:57:00Z
+- Conversation ID: 3ea14768-fe53-4f59-a65e-376b7022d92b
+- Updated: 2026-08-28T12:28:56Z
 
 ## Task Summary
 - **What to build**:
-  1. Standard Dietary Taxonomy (`vegetarian`, `vegan`, `gluten-free`, `dairy-free`, `keto`, `low-carb`, `pescatarian`, `nut-free`) in `src/types/index.ts` & `src/lib/dietary.ts`.
-  2. Profile & Dietary Settings page (`/profile`), settings sync hook (`src/hooks/useProfile.ts`), and navigation links.
-  3. AI Extraction Dietary Auto-Tagging in `src/lib/ai.ts` schema/prompts and deterministic fallback detection in `src/lib/dietary.ts` & `src/lib/extract-recipe.ts`.
-  4. Recipe collection dietary filtering chips (`All`, `Vegetarian`, `Vegan`, `Gluten-Free`, `Dairy-Free`, `Keto`, `Low-Carb`, `Pescatarian`, `Nut-Free`, `Quick <30min`, `Matches My Preferences`) and colored tag badges (`RecipeCard.tsx`, `/recipes`, `/recipes/[id]`).
-  5. Dietary-compliant meal planner auto-fill in `src/lib/meal-planner.ts` & `/meal-plan` active dietary banner and picker modal filtering.
-  6. Unit & Integration test suite in `tests/unit-dietary-m4.test.ts`.
-- **Success criteria**:
-  - `npx tsc --noEmit` -> 0 errors.
-  - `npm run lint` -> 0 errors / 0 warnings.
-  - `npm run build` -> 0 errors.
-  - `npm test` -> 639/639 passed (100%).
+  1. `ProBadge.tsx`: Reusable Pro badge / crown component (with Crown icon and styled gradient badge).
+  2. `Navbar.tsx`: Show Pro crown badge next to user avatar on desktop and mobile top nav when `profile?.plan === 'pro'`. Add "Pricing" link in desktop nav and mobile avatar dropdown. Ensure links work smoothly for authenticated and guest users.
+  3. `page.tsx` (Landing page): Add "Pricing" link in header nav and footer links. Add subtle "Upgrade to Pro" or "Pricing" CTA in appropriate feature sections.
+  4. Copy review across `UpgradePrompt.tsx`, `extract/page.tsx`, `profile/page.tsx` to ensure encouraging, friendly, non-punishing copy.
+- **Success criteria**: TypeScript check passes, clean Next.js build, 100% test pass.
+- **Interface contracts**: PROJECT.md & ORIGINAL_REQUEST.md
+
+## Change Tracker
+- **Files modified**:
+  - `src/components/monetization/ProBadge.tsx`: Created reusable Pro badge/crown component with size & variant configurations.
+  - `src/components/layout/Navbar.tsx`: Integrated Pro crown badge, Pricing navigation links, and guest/authenticated state handling.
+  - `src/app/page.tsx`: Added Pricing link in header, footer, and a Pro Tier showcase callout with $4.99/mo details.
+  - `src/components/monetization/UpgradePrompt.tsx`: Updated with encouraging, friendly, benefit-focused messaging and ProBadge integration.
+  - `src/app/(app)/extract/page.tsx`: Added ProBadge in header, friendly toast notifications and upgrade prompt copy.
+  - `src/app/(app)/profile/page.tsx`: Integrated ProBadge in user account card and subscription card.
+  - `tests/unit-navigation-badges-m4.test.ts`: Created unit test suite covering all M4 requirements.
+  - `tests/runner.ts`: Included M4 test suite in test runner.
+- **Build status**: PASS (`npx tsc --noEmit`, `npm run build`, `npm test` 979/979 passed, `npm run lint` 0 errors).
+- **Pending issues**: None.
+
+## Quality Status
+- **Build/test result**: All 979 tests passed (100% pass rate).
+- **Lint status**: Clean (0 errors).
+- **Tests added/modified**: `tests/unit-navigation-badges-m4.test.ts` (16 test assertions).
+
+## Loaded Skills
+- None requested specifically.
 
 ## Key Decisions Made
-- Centralized dietary taxonomy, option info, colored badge styling, and deterministic tag detection in `src/lib/dietary.ts` and `src/types/index.ts` for clean reusability across components, extraction pipeline, meal planner, and test runners.
-- Structured `ProfilePage` using `ProfileForm` with explicit props/initial values to eliminate synchronous `setState` in `useEffect` and adhere to React 19 rules.
-- Implemented multi-restriction filtering in `generateMealPlan` ensuring that any combination of dietary preferences (e.g. keto + gluten-free) is strictly enforced while preserving locked slots and handling 0-match combinations gracefully.
+- `ProBadge` supports multiple sizes (`xs`, `sm`, `md`, `lg`) and visual variants (`gradient`, `subtle`, `outline`, `icon-only`) with accessible ARIA tags and gold/amber styling.
+- `Navbar` integrates `useProfile` to dynamically display the crown badge next to user avatars on desktop and mobile top headers when `profile?.plan === 'pro'`.
+- `Navbar` presents a dedicated "Pricing" link in desktop nav items, mobile avatar dropdown, and desktop avatar dropdown, with a graceful login/pricing fallback for guest users.
+- Landing page includes header and footer pricing links along with a dedicated Pro showcase section highlighting unlimited AI extractions and priority features.
+- Copy throughout the app emphasizes what Pro enables (unlimited extractions, smart auto-fill, priority AI) rather than punishing free users.
 
 ## Artifact Index
-- `src/types/index.ts` — Type definitions for DietaryRestriction, UserPreferences, Recipe dietary tags
-- `src/lib/dietary.ts` — Dietary constants, badge classes, auto-tag detection, and filter utilities
-- `src/hooks/useProfile.ts` — Firestore real-time sync hook for user profile & dietary preferences
-- `src/app/(app)/profile/page.tsx` — Full profile and dietary settings management UI
-- `src/components/layout/Navbar.tsx` — Profile & Settings links in desktop and mobile menus
-- `src/components/recipe/RecipeCard.tsx` — Reusable recipe card with colored dietary badges
-- `src/app/(app)/recipes/page.tsx` — Recipe collection with real-time dietary filter chips and preferences matching
-- `src/app/(app)/recipes/[id]/page.tsx` — Recipe detail view with dietary tag badges
-- `src/lib/meal-planner.ts` — Auto-fill algorithm with strict dietary restriction enforcement
-- `src/app/(app)/meal-plan/page.tsx` — Meal plan view with active dietary preferences banner and picker filter
-- `src/lib/ai.ts` — Updated recipe schema and extraction prompts with dietary tagging rules
-- `src/lib/extract-recipe.ts` — Extraction pipeline integrating AI and fallback dietary detection
-- `tests/unit-dietary-m4.test.ts` — Comprehensive unit test suite for M4 dietary taxonomy, auto-tagging, planner, and filtering
+- `.agents/worker_m4/DISPATCH.md` — Assignment instructions
+- `.agents/worker_m4/BRIEFING.md` — Persistent agent briefing and index
+- `.agents/worker_m4/progress.md` — Progress tracker
+- `.agents/worker_m4/handoff.md` — Milestone completion handoff report

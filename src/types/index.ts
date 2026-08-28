@@ -153,6 +153,10 @@ export interface CookingLogEntry {
   rating?: number;
 }
 
+export type SubscriptionPlan = 'free' | 'pro';
+
+export const FREE_TIER_MONTHLY_LIMIT = 5;
+
 // User profile — stored at users/{userId}
 export interface UserProfile {
   uid?: string;
@@ -160,6 +164,11 @@ export interface UserProfile {
   email: string;
   photoURL?: string;
   preferences: UserPreferences;
+  plan?: SubscriptionPlan;
+  extractionsThisMonth?: number;
+  extractionMonth?: string; // "YYYY-MM"
+  subscriptionId?: string;
+  subscriptionStatus?: string;
   createdAt: Date;
   updatedAt?: Date;
 }

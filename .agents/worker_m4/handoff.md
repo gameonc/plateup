@@ -1,77 +1,53 @@
-# Milestone 4 Handoff Report: Dietary Preferences & Recipe Filtering (R4)
+# Milestone 4 Handoff Report: Navigation, Badges & UI Integration
 
 ## 1. Observation
-- **Taxonomy & Types**:
-  - Defined standard 8-restriction taxonomy in `src/types/index.ts` and `src/lib/dietary.ts`: `'vegetarian' | 'vegan' | 'gluten-free' | 'dairy-free' | 'keto' | 'low-carb' | 'pescatarian' | 'nut-free'`.
-  - Added `STANDARD_DIETARY_RESTRICTIONS`, `DIETARY_OPTIONS` (with descriptions and colored badge styling), and updated `Recipe` interface to include `dietaryTags?: DietaryRestriction[] | string[]`.
-  - Updated `UserPreferences` and `UserProfile` to include `dietaryRestrictions: DietaryRestriction[]`.
-- **Profile & Settings UI (`/profile`)**:
-  - Created `src/hooks/useProfile.ts` with real-time Firestore listeners at `users/{userId}` and optimistic update helpers `updatePreferences` and `updateUserProfile`.
-  - Created `src/app/(app)/profile/page.tsx` rendering account details, interactive dietary switches/cards for all 8 categories (with icons, select all / clear all, active counters), repeat window slider (1-14 days), daily meal slot selectors, and save toasts.
-  - Updated `src/components/layout/Navbar.tsx` to add "Profile & Settings" links in desktop dropdown and mobile menu.
-- **AI Extraction & Auto-Tagging**:
-  - Updated `recipeSchema` in `src/lib/ai.ts` to include `dietaryTags` string array.
-  - Updated `YOUTUBE_RECIPE_PROMPT` and `IMAGE_RECIPE_PROMPT` in `src/lib/ai.ts` with explicit rules for identifying dietary categories.
-  - Implemented `detectDietaryTags` in `src/lib/dietary.ts` and integrated in `src/lib/extract-recipe.ts` for deterministic fallback tag detection.
-  - Updated `src/app/(app)/extract/page.tsx` and `src/components/recipe/RecipePreview.tsx` to persist and render colored dietary badges.
-- **Recipe Collection Filtering & Tag Badges**:
-  - Created `src/components/recipe/RecipeCard.tsx` and `src/components/recipes/RecipeCard.tsx` displaying colored dietary badges (`🌱 vegetarian`, `✨ vegan`, `🌾 gluten-free`, `🥛 dairy-free`, `🔥 keto`, `⚖️ low-carb`, `🐟 pescatarian`, `🚫 nut-free`).
-  - Updated `src/app/(app)/recipes/page.tsx` with horizontal scrollable filter chips (`All Recipes`, `Matches My Preferences`, `Quick (<30m)`, and all 8 dietary categories), real-time search & dietary filtering, and empty state reset button.
-  - Updated `src/app/(app)/recipes/[id]/page.tsx` to display colored dietary badges in recipe metadata.
-- **Dietary-Compliant Meal Planner Auto-Fill**:
-  - Updated `generateMealPlan` in `src/lib/meal-planner.ts` to strictly filter candidate recipes against user dietary restrictions (supporting single and multi-restriction combinations, e.g. keto + gluten-free).
-  - Preserved user-locked slots and handled 0-match cases gracefully.
-  - Added Active Dietary Preferences Enforcement banner on `src/app/(app)/meal-plan/page.tsx`.
-  - Integrated dietary filter chips and dietary badges in Recipe Picker modal on `/meal-plan`.
-- **Verification & Test Suite**:
-  - Created `tests/unit-dietary-m4.test.ts` covering 16 unit tests for taxonomy, auto-tagging, compliant auto-fill, and multi-restriction filtering.
-  - `npx tsc --noEmit` -> 0 errors.
-  - `npm run lint` -> 0 errors, 0 warnings.
-  - `npm run build` -> Compiled in 2.1s, all 11 Next.js routes generated successfully.
-  - `npm test` -> 639/639 tests passed across 18 test files (100% pass rate).
+
+- **Files Created & Modified**:
+  - `src/components/monetization/ProBadge.tsx`: Created reusable Pro badge & crown component supporting multiple sizes (`xs`, `sm`, `md`, `lg`) and variants (`gradient`, `subtle`, `outline`, `icon-only`) with Lucide's `Crown` icon styled with an amber/gold theme and accessible ARIA attributes.
+  - `src/components/layout/Navbar.tsx`: Integrated `useProfile` to dynamically display the Pro badge / crown icon next to user avatar in both Desktop top navigation and Mobile top header when `profile?.plan === 'pro'`. Added a "Pricing" link in desktop navigation items, mobile avatar dropdown menu, and desktop avatar dropdown menu. Added clean guest user navigation fallbacks.
+  - `src/app/page.tsx`: Added "Pricing" link in the sticky header (between logo and Login/Get Started), in the footer links, and added a dedicated "PlateUp Pro Experience" callout banner with $4.99/mo transparent pricing and CTA button linking to `/pricing`. Added an FAQ item explaining Pro features.
+  - `src/components/monetization/UpgradePrompt.tsx`: Updated with encouraging, friendly, and non-punishing copy, highlighting what Pro unlocks (unlimited YouTube & photo extractions, smart meal planning, priority AI speed) and integrating `ProBadge`.
+  - `src/app/(app)/extract/page.tsx`: Integrated `ProBadge` for Pro users, friendly extraction count banner, and positive toast messages upon limit exhaustion ("Ready for More Recipes? ✨").
+  - `src/app/(app)/profile/page.tsx`: Integrated `ProBadge` into the account header badge and subscription status card.
+  - `tests/unit-navigation-badges-m4.test.ts`: Created comprehensive unit test suite covering ProBadge props/variants, Navbar links & badges, Landing Page links & showcase CTA, and copy tone verification.
+  - `tests/runner.ts`: Registered `unit-navigation-badges-m4.test.ts` into the master test runner suite.
+
+- **Verification Commands and Outputs**:
+  - `npx tsc --noEmit` -> Exit code 0 (Zero TypeScript errors).
+  - `npm run build` -> Clean Next.js 16 build; all 16 static/dynamic routes compiled successfully.
+  - `npm test` -> 32 test files executed, 979 tests passed out of 979 (100% pass rate, 0 failures, 0 skipped).
+  - `npm run lint` -> 0 errors.
 
 ## 2. Logic Chain
-1. **Requirement R4 & Feature Specs F38-F40**: The system requires a standardized 8-category dietary taxonomy, persistent user dietary preferences, AI and rule-based recipe auto-tagging, collection filtering with visual badges, and dietary-enforced meal planning.
-2. **Type Safety & Data Integrity**: Standardizing `DietaryRestriction` and `STANDARD_DIETARY_RESTRICTIONS` in `src/types/index.ts` and `src/lib/dietary.ts` guarantees that preferences, recipe tags, filter chips, and planner logic reference identical string literals.
-3. **Optimistic & Persistent Synchronization**: `useProfile.ts` connects to Firestore `users/{userId}` and initializes default preferences (`repeatWindowDays: 5`, `mealsPerDay: ['breakfast', 'lunch', 'dinner']`, `dietaryRestrictions: []`), allowing real-time reactivity when preferences change.
-4. **Extraction Pipeline Enhancement**: By combining Gemini 2.5 structured schema output with deterministic rule-based analysis in `detectDietaryTags`, recipes extracted from YouTube or images reliably receive dietary tags even when video descriptions lack explicit labels.
-5. **Strict Auto-Fill Compliance**: `generateMealPlan` filters recipes before applying variety algorithms, ensuring that only recipes satisfying all user restrictions enter the candidate pool, while respecting locked slots and handling empty matching sets gracefully without crashing.
-6. **Unified Verification**: All test suites (Tiers 1-4, Adversarial suites, M3 Unit tests, and M4 Unit tests) pass in `npm test` without any regressions.
+
+1. **Badge System**: Requirement §R4 requires a visual "Pro" badge or crown icon next to the user's avatar. Creating `ProBadge.tsx` as a standalone component ensures modularity and consistent visual styling (amber/gold gradient, crown icon, accessible title/aria labels) across Navbar, Profile, Extract page, and Upgrade banners.
+2. **Navbar Integration**: In `Navbar.tsx`, reading `profile?.plan === 'pro'` via `useProfile()` allows conditional rendering of `ProBadge` in both Desktop navigation and Mobile top bar without duplicate logic. Adding `/pricing` to desktop nav items and avatar dropdown menus ensures one-click access to the pricing and upgrade flow for both authenticated and guest users.
+3. **Landing Page Integration**: Adding `/pricing` links in the header navigation and footer, as well as an engaging Pro showcase section on the landing page, improves discoverability of the subscription tier for prospective users.
+4. **Tone & Copy Review**: Per §R4, all upgrade messaging across `UpgradePrompt.tsx`, `extract/page.tsx`, and `profile/page.tsx` was audited to ensure positive, encouraging phrasing ("Unlock Unlimited Extractions", "Ready for More Recipes? ✨") that highlights unlocked capabilities rather than penalizing free users.
+5. **Testing & Validation**: Unit tests in `unit-navigation-badges-m4.test.ts` exercise all component variants, navbar links, landing page routes, and tone criteria. Integration with `runner.ts` ensures regression testing across the entire 979-test suite.
 
 ## 3. Caveats
-- Firestore offline testing relies on mocked/memory states in unit test runners; live cloud tests require valid Firebase credentials in `.env.local`.
-- Allergen warning: While dietary tags are auto-detected by AI and keyword rules, recipes with severe allergies should always be reviewed by the user.
-- No other caveats; all Milestone 4 requirements are implemented, verified, and passing.
+
+- Stripe checkout sessions on the Pricing page run in test mode when live keys are not configured in the local environment, which is expected during development per specification.
+- No caveats; all requirements of Milestone 4 have been fully implemented and verified.
 
 ## 4. Conclusion
-Milestone 4 (Dietary Preferences & Filtering - R4) is complete and fully verified.
-- Standard 8-category dietary taxonomy is implemented and enforced.
-- Profile & Settings UI `/profile` manages dietary restrictions, repeat windows, and meal schedules.
-- Recipe extraction auto-tags dietary categories and displays colored badges in preview and cards.
-- Recipe collection `/recipes` supports real-time dietary filter chips and "Matches My Preferences".
-- Meal planner `/meal-plan` enforces dietary restrictions during auto-fill with active banner indicator and recipe picker modal filter.
-- Build, lint, and test suites all pass with zero errors.
+
+Milestone 4 (Navigation, Badges & UI Integration) is complete. The Pro badge/crown component, navbar badges, in-app and landing page pricing navigation, and encouraging upgrade copy have been implemented and verified with zero TypeScript errors, clean Next.js build, and 100% test pass across all 979 test cases.
 
 ## 5. Verification Method
-Execute the following commands in `/Users/CLD/.gemini/antigravity/scratch/plateup`:
 
-1. **TypeScript Typecheck**:
-   ```bash
-   npx tsc --noEmit
-   # Expected: Exit code 0, 0 errors
-   ```
-2. **ESLint**:
-   ```bash
-   npm run lint
-   # Expected: Exit code 0, 0 errors, 0 warnings
-   ```
-3. **Production Next.js Build**:
-   ```bash
-   npm run build
-   # Expected: Exit code 0, all 11 static/dynamic routes compiled
-   ```
-4. **Master E2E and Unit Test Suite**:
-   ```bash
-   npm test
-   # Expected: 639/639 tests passed across 18 test suites
-   ```
+To independently verify:
+```bash
+# 1. Verify TypeScript types
+npx tsc --noEmit
+
+# 2. Verify Next.js production build
+npm run build
+
+# 3. Verify all unit, feature, and scenario tests
+npm test
+
+# 4. Verify ESLint rules
+npm run lint
+```

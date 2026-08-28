@@ -1,78 +1,103 @@
-# Project: PlateUp
+# Project: PlateUp Monetization Features
 
-## Architecture & Tech Stack
-- **Framework**: Next.js 15 (App Router), React 19, TypeScript
-- **Styling**: Tailwind CSS v4, shadcn/ui, Lucide Icons
-- **Backend / APIs**: Next.js Route Handler (`/api/youtube-recipe`) powered by `youtubei.js`
-- **Firebase Services**:
-  - **Firebase Auth**: Email/Password + Google OAuth Popup
-  - **Cloud Firestore**: Collections:
-    - `users/{uid}` (profile, preferences, dietaryRestrictions, repeatWindowDays)
-    - `users/{uid}/recipes/{id}` (recipe docs with ingredients, instructions, dietaryTags, rating, timesMade, notes)
-    - `users/{uid}/mealPlans/{weekId}` (21 slots: 7 days x 3 meals)
-    - `users/{uid}/cookingLog/{id}` (cooking history events)
-    - `users/{uid}/shoppingList/current` (aggregated grocery items, checked states, custom items)
-  - **Firebase AI Logic**: Gemini 2.5 Flash (`GoogleAIBackend`) for YouTube transcript extraction and multimodal photo recipe parsing with structured JSON schema
-- **Design System**: Warm food aesthetic (terracotta orange / amber primary `oklch(0.62 0.21 42)`, warm cream / stone neutrals, responsive 375px mobile bottom nav + 1440px desktop header)
+## Architecture
+PlateUp is a Next.js 15 recipe extraction and meal planning web application using TypeScript, Tailwind CSS v4, Base UI / shadcn components, Firebase (Auth + Firestore), and Google Generative AI (Gemini 2.5 Flash).
 
----
+The monetization layer adds two revenue streams:
+1. **Affiliate Shopping Integration**:
+   - URL generators for partner grocery stores (Amazon Fresh, Instacart) with clean ingredient query sanitization and affiliate referral parameters.
+   - UI CTAs on Shopping List page and Recipe Detail page with transparent affiliate disclosures.
+2. **Freemium Tier System & Stripe Subscription**:
+   - Monthly extraction quota tracking (5 free extractions/month for Free tier, unlimited for Pro tier) reset by calendar month (`YYYY-MM`).
+   - Friendly upgrade banners and disabled extraction buttons upon reaching quota; Discover page remains completely free & ungated.
+   - Stripe Checkout session creation for $4.99/mo recurring subscription, session verification, and Firestore user profile update to `plan: 'pro'`.
+   - Visual Pro badges/crowns in navbar and pricing navigation links.
 
 ## Feature Inventory
 | # | Feature | Description | Milestone | Source |
-|---|---|---|---|---|
-| F-01 | Build & Font Safety | Build succeeds in sandboxed/offline envs with system font fallbacks | M1 | Survey |
-| F-02 | Email/Password Registration | Creates account in Firebase Auth and profile in Firestore | M1 | Survey / R1 |
-| F-03 | Email/Password Sign-In | Authenticates existing user and redirects to `/dashboard` | M1 | Survey / R1 |
-| F-04 | Google OAuth Popup | Popup auth with Google provider and profile creation | M1 | Survey / R1 |
-| F-05 | Route Protection Guard | `AuthGuard` routes unauthenticated users to `/login` with redirect intent | M1 | Survey / R1 |
-| F-06 | YouTube Metadata & Transcript API | Server Route Handler fetching metadata & captions via `youtubei.js` | M1 | Survey / R1 |
-| F-07 | YouTube AI Recipe Parser | Gemini 2.5 Flash structured recipe extraction from transcript | M1 | Survey / R1 |
-| F-08 | Photo AI Recipe Extractor | Multimodal vision recipe extraction from uploaded dish image | M1 | Survey / R1 |
-| F-09 | Tab Query Param Support | `?tab=photo` opens Photo tab on `/extract` | M1 | Survey / R1 |
-| F-10 | Recipe Persistence | Saves extracted recipe with thumbnail to Firestore `users/{uid}/recipes` | M1 | Survey / R1 |
-| F-11 | 1-5 Star Rating System | User can rate recipes from 1 to 5 stars; persists to Firestore | M1 | Survey / R1 |
-| F-12 | "I Made This" Cook Tracker | Increments cook count and logs record to cooking history | M1 | Survey / R1 |
-| F-13 | Recipe Notes Auto-save | Custom notes with auto-save on blur | M1 | Survey / R1 |
-| F-14 | In-Recipe Ingredient Checklist | Interactive ingredient checkboxes while cooking | M1 | Survey / R1 |
-| F-15 | Recipe Deletion Modal | Deletes recipe document with confirmation modal | M1 | Survey / R1 |
-| F-16 | Recipe Search & Sort | Search by text, sort by Newest, Rating, Most Made, Recent | M1 | Survey / R1 |
-| F-17 | 7x3 Weekly Planner Grid | 7 days (Mon-Sun) × 3 meal times (Breakfast, Lunch, Dinner) | M1 | Survey / R1 |
-| F-18 | ISO Week Navigation | Navigates across calendar weeks with accurate ISO year calculations | M1 | Survey / R1 |
-| F-19 | Manual Slot Assignment | Recipe picker dialog to assign recipe to day/meal slot | M1 | Survey / R1 |
-| F-20 | Meal Plan Slot Clearing | Removes individual slot or clears entire week | M1 | Survey / R1 |
-| F-21 | Smart Auto-Fill Engine | Fills empty slots avoiding recent repeats & balancing variety | M1 | Survey / R1 |
-| F-22 | Dashboard Today's Menu | Extracts today's 3 meals from active week meal plan | M1 | Survey / R1 |
-| F-23 | Dashboard User Stats | Computes total recipes, meals planned this week, made this month | M1 | Survey / R1 |
-| F-24 | Dashboard Recent Recipes | Displays top 5 recent recipes with thumbnail and source badges | M1 | Survey / R1 |
-| F-25 | Warm Food Theming | Unified OKLCH orange/amber palette in `globals.css` | M2 | Survey / R2 |
-| F-26 | Mobile-First Layout & Nav | 375px mobile bottom nav, no z-index collisions, safe-area padding | M2 | Survey / R2 |
-| F-27 | Loading States & Skeletons | Skeleton screens on Dashboard, Recipes, Detail, Planner | M2 | Survey / R2 |
-| F-28 | Actionable Empty States | Contextual illustrations and call-to-action buttons for empty states | M2 | Survey / R2 |
-| F-29 | Mobile Day Selector | Segmented Day Tabs on `/meal-plan` for compact mobile viewing | M2 | Survey / R2 |
-| F-30 | High-Converting Landing Page | Hero preview, social proof, feature cards, FAQ accordion | M2 | Survey / R2 |
-| F-31 | Micro-Interactions & Feedback | Toast notifications and animated feedback on ratings, saves, cooks | M2 | Survey / R2 |
-| F-32 | Shopping List Navigation | Accessible from desktop top Navbar and mobile bottom Navbar | M3 | Survey / R3 |
-| F-33 | Meal Plan Grocery Aggregator | Extracts ingredients across all assigned meals in current plan | M3 | Survey / R3 |
-| F-34 | Intelligent Ingredient Merger | Normalizes units, parses fractions, sums quantities, aliases duplicates | M3 | Survey / R3 |
-| F-35 | Grocery Department Grouping | Categorizes ingredients into 8 store departments (Produce, Dairy, etc.) | M3 | Survey / R3 |
-| F-36 | Interactive Check-off State | Check off items while shopping with strikethrough and Firestore sync | M3 | Survey / R3 |
-| F-37 | Custom Shopping List Items | Add, edit, and delete manual grocery items | M3 | Survey / R3 |
-| F-38 | Dietary Preferences Profile UI | User can configure dietary restrictions (Vegetarian, Vegan, Keto, etc.) | M4 | Survey / R4 |
-| F-39 | AI Extraction Auto-Tagging | Prompts Gemini to detect and assign standard dietary tags | M4 | Survey / R4 |
-| F-40 | Dietary Recipe Filter & Auto-Fill | Recipe library filter pills & dietary-compliant meal plan auto-fill | M4 | Survey / R4 |
-
----
+|---|---------|-------------|-----------|--------|
+| F-41 | Affiliate Link Generation & Sanitization | `src/lib/affiliate.ts` generating sanitized query URLs with affiliate tags for Amazon Fresh and Instacart + disclosure text | M1 | ORIGINAL_REQUEST §R1 |
+| F-42 | Shopping List & Recipe Detail Affiliate CTAs | "Order Ingredients" buttons and modal/dropdown with affiliate disclosure on Shopping List and Recipe Detail pages | M1 | ORIGINAL_REQUEST §R1 |
+| F-43 | Freemium Tier & Monthly Usage Tracking | `UserProfile` extension, `src/lib/usage.ts` tracking 5 free monthly extractions, ISO month reset (`YYYY-MM`), atomic increment | M2 | ORIGINAL_REQUEST §R2 |
+| F-44 | Extract Page Quota UI & Ungated Discover | Remaining extractions banner ("3 of 5 free extractions remaining"), friendly upgrade prompt on quota limit, unrestricted Discover page | M2 | ORIGINAL_REQUEST §R2 |
+| F-45 | Stripe Checkout & Webhook/Verification | `stripe` package integration, `/api/stripe/checkout` route ($4.99/mo), session verification & Firestore sync to `plan: 'pro'` | M3 | ORIGINAL_REQUEST §R3 |
+| F-46 | /pricing Page & Profile Subscription Card | `/pricing` page with Free vs Pro comparison table and "Go Pro" button; Profile page subscription management section | M3 | ORIGINAL_REQUEST §R3 |
+| F-47 | Navbar Pro Crown Badge & Pricing Navigation | Pro crown icon / badge next to user avatar in navbar when `plan: 'pro'`; "Pricing" link in landing page and in-app navigation | M4 | ORIGINAL_REQUEST §R4 |
+| F-48 | E2E Testing Suite & Build Health | Comprehensive 4-tier test suites (Tiers 1-4) + adversarial hardening (Tier 5), zero TypeScript errors, build pass | M-Final / E2E Track | ORIGINAL_REQUEST §Acceptance Criteria |
 
 ## Milestones
 | # | Name | Scope | Dependencies | Status |
-|---|---|---|---|---|
-| M1 | Core Bug Fixes, Type Safety & Auth/Data Flow | F-01 to F-24 bug fixes (Photo thumbnail, `?tab=photo`, mobile z-index collision, mobile user nav, ESLint fixes, Firestore rules for shoppingList, build font safety) | none | DONE |
-| M2 | UI Polish, Theming, Skeletons & Mobile Responsiveness | F-25 to F-31 (warm orange/amber palette, skeleton loaders, mobile day switcher on meal plan, landing page overhaul, login UX polish, container padding) | M1 | DONE |
-| M3 | Shopping List Feature | F-32 to F-37 (ingredient aggregation & unit math engine, Firestore hook, `/shopping-list` page, checklist persistence, Navbar links, "Add to List" on detail) | M1, M2 | DONE |
-| M4 | Dietary Preferences & Smart Filtering | F-38 to F-40 (`/profile` settings page, dietary taxonomy, Gemini AI prompt auto-tagging, `/recipes` filter chips, dietary-compliant `meal-planner.ts` auto-fill) | M1, M2 | DONE |
-| M5 | E2E Verification & Adversarial Hardening | Pass 100% of E2E Test Suite (Tiers 1-4) + Tier 5 Adversarial Coverage Hardening with Challenger | M1, M2, M3, M4, E2E Test Track | DONE |
+|---|------|-------|-------------|--------|
+| M-E2E | E2E Test Suite Development | Requirement-driven test suite (Unit, Tier 1 Feature, Tier 2 Boundary, Tier 3 Interaction, Tier 4 Real-World Scenarios), update runner.ts, publish TEST_READY.md | none | DONE |
+| M1 | Affiliate Shopping Integration | `src/lib/affiliate.ts`, `src/components/shopping/OrderIngredientsButton.tsx`, Shopping List page & Recipe Detail page integration with disclosure text | none | DONE |
+| M2 | Freemium Tier & Usage Tracking | `src/types/index.ts`, `src/lib/usage.ts`, `src/hooks/useProfile.ts`, `src/hooks/useAuth.tsx`, `src/app/(app)/extract/page.tsx` quota display & upgrade prompt | none | DONE |
+| M3 | Stripe Checkout & Pricing Page | Install `stripe`, `/api/stripe/checkout`, `/api/stripe/verify-session`, `/api/stripe/webhook`, `/pricing` page, `/profile` subscription management | M2 | DONE |
+| M4 | Navigation, Badges & UI Integration | `Navbar.tsx` Pro crown/badge & pricing links, `src/app/page.tsx` landing page pricing links, upgrade prompt styling | M2, M3 | DONE |
+| M-Final | 100% E2E Pass & Coverage Hardening | Run full test suite across all tiers, fix any regressions, execute white-box adversarial coverage checks | M1, M2, M3, M4, M-E2E | DONE |
 
----
+## Interface Contracts
 
-## Interface Contracts & Data Models
-- Fully established in `src/types/index.ts`, `src/lib/dietary.ts`, `src/lib/ingredient-parser.ts`, `src/lib/shopping-aggregator.ts`, and `src/lib/meal-planner.ts`.
+### Affiliate Engine ↔ UI Pages
+```typescript
+// src/lib/affiliate.ts
+export function cleanIngredientForSearch(raw: string): string;
+export function buildAmazonFreshUrl(ingredients: ({ item?: string; name?: string } | string | null | undefined)[], affiliateTag?: string): string;
+export function buildInstacartUrl(ingredients: ({ item?: string; name?: string } | string | null | undefined)[], partnerTag?: string): string;
+export const AFFILIATE_DISCLOSURE_TEXT: string;
+```
+
+### Usage Engine ↔ Profile & Extract Page
+```typescript
+// src/lib/usage.ts & src/types/index.ts
+export type SubscriptionPlan = 'free' | 'pro';
+export interface UserProfile {
+  // ... existing fields
+  plan?: SubscriptionPlan;
+  extractionsThisMonth?: number;
+  extractionMonth?: string; // "YYYY-MM"
+  subscriptionId?: string;
+  subscriptionStatus?: string;
+}
+export const FREE_TIER_MONTHLY_LIMIT = 5;
+export function getCurrentMonthKey(date?: Date): string;
+export function getExtractionUsage(profile: UserProfile | null | undefined): {
+  plan: 'free' | 'pro';
+  used: number;
+  limit: number;
+  remaining: number;
+  isLimitReached: boolean;
+};
+export async function recordExtractionUsage(userId: string): Promise<{ remaining: number; plan: SubscriptionPlan }>;
+```
+
+### Stripe API ↔ Client Checkout
+```typescript
+// POST /api/stripe/checkout
+// Request: { userId: string; userEmail?: string; returnUrl?: string }
+// Response: { url: string; sessionId: string }
+
+// POST /api/stripe/verify-session
+// Request: { sessionId: string; userId: string }
+// Response: { success: boolean; plan: 'pro'; subscriptionId: string }
+```
+
+## Code Layout
+- `src/types/index.ts`: Shared types for UserProfile, SubscriptionPlan, Affiliate interfaces.
+- `src/lib/affiliate.ts`: URL building & keyword sanitization for grocery partners.
+- `src/lib/usage.ts`: Quota calculation, calendar month reset, usage tracking.
+- `src/lib/stripe.ts`: Stripe client/server initialization.
+- `src/hooks/useProfile.ts`: Firestore user profile subscription listener & state.
+- `src/hooks/useUsage.ts`: Convenience hook for extraction usage & limits.
+- `src/components/layout/Navbar.tsx`: Pro crown badge, pricing link.
+- `src/components/shopping/OrderIngredientsButton.tsx`: Reusable affiliate shopping action & dialog.
+- `src/components/monetization/UpgradePrompt.tsx`: Friendly, encouraging upgrade prompt banner.
+- `src/components/monetization/ProBadge.tsx`: Reusable Pro crown badge.
+- `src/app/(app)/shopping-list/page.tsx`: Shopping list page with order CTA.
+- `src/app/(app)/recipes/[id]/page.tsx`: Recipe detail page with order CTA.
+- `src/app/(app)/extract/page.tsx`: Extract page with remaining quota and upgrade gating.
+- `src/app/(app)/profile/page.tsx`: Profile page with subscription management card.
+- `src/app/pricing/page.tsx`: Pricing comparison page ($0 Free vs $4.99/mo Pro).
+- `src/app/api/stripe/checkout/route.ts`: Stripe checkout session creation.
+- `src/app/api/stripe/verify-session/route.ts`: Instant session verification for Firestore sync.
+- `src/app/api/stripe/webhook/route.ts`: Stripe webhook handler.
+- `tests/`: Unit, feature, boundary, and scenario test suites executed via `tests/runner.ts`.

@@ -11,8 +11,10 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+(process.env as Record<string, string | undefined>)['NODE_ENV'] = process.env.NODE_ENV || 'test';
+
 const TEST_FILES = [
-  // Tier 1: Feature Coverage (F-01 to F-40)
+  // Tier 1: Feature Coverage (F-01 to F-47)
   path.join(__dirname, 'tier1-features', 'f01-f05-auth-safety.test.ts'),
   path.join(__dirname, 'tier1-features', 'f06-f10-extraction-persistence.test.ts'),
   path.join(__dirname, 'tier1-features', 'f11-f15-recipe-actions.test.ts'),
@@ -21,28 +23,42 @@ const TEST_FILES = [
   path.join(__dirname, 'tier1-features', 'f25-f31-ui-mobile-landing.test.ts'),
   path.join(__dirname, 'tier1-features', 'f32-f37-shopping-list.test.ts'),
   path.join(__dirname, 'tier1-features', 'f38-f40-dietary-filtering.test.ts'),
+  path.join(__dirname, 'tier1-features', 'f41-f45-monetization.test.ts'),
 
-  // Tier 2: Boundary & Corner Cases (F-01 to F-40)
+  // Tier 2: Boundary & Corner Cases (F-01 to F-47)
   path.join(__dirname, 'tier2-boundary', 'f01-f10-boundary.test.ts'),
   path.join(__dirname, 'tier2-boundary', 'f11-f20-boundary.test.ts'),
   path.join(__dirname, 'tier2-boundary', 'f21-f30-boundary.test.ts'),
   path.join(__dirname, 'tier2-boundary', 'f31-f40-boundary.test.ts'),
+  path.join(__dirname, 'tier2-boundary', 'f41-f45-monetization-boundary.test.ts'),
 
   // Tier 3: Pairwise Cross-Feature Interactions
   path.join(__dirname, 'tier3-pairwise', 'pairwise-interactions.test.ts'),
 
   // Tier 4: Real-World Application Scenarios
   path.join(__dirname, 'tier4-scenarios', 'real-world-scenarios.test.ts'),
+  path.join(__dirname, 'tier4-scenarios', 'monetization-scenarios.test.ts'),
 
-  // Tier 5: Adversarial & Spec Verification Suites
-  path.join(__dirname, 'adversarial-m1.test.ts'),
-  path.join(__dirname, 'adversarial-challenger-m1.test.ts'),
+  // Monetization & Domain Unit Test Suites
+  path.join(__dirname, 'unit-affiliate.test.ts'),
+  path.join(__dirname, 'unit-affiliate-m1.test.ts'),
+  path.join(__dirname, 'unit-freemium.test.ts'),
+  path.join(__dirname, 'unit-stripe.test.ts'),
+  path.join(__dirname, 'unit-stripe-m3.test.ts'),
+  path.join(__dirname, 'unit-usage-m2.test.ts'),
   path.join(__dirname, 'unit-shopping-m3.test.ts'),
   path.join(__dirname, 'unit-dietary-m4.test.ts'),
-  path.join(__dirname, 'adversarial-tier5-hardening.test.ts'),
+  path.join(__dirname, 'unit-navigation-badges-m4.test.ts'),
   path.join(__dirname, 'unit-qa-improvements.test.ts'),
-  path.join(__dirname, 'adversarial-empirical-verification.test.ts'),
+
+  // Tier 5: Adversarial & Hardening Suites
+  path.join(__dirname, 'adversarial-m1.test.ts'),
+  path.join(__dirname, 'adversarial-challenger-m1.test.ts'),
   path.join(__dirname, 'adversarial-challenger-m2.test.ts'),
+  path.join(__dirname, 'adversarial-tier5-hardening.test.ts'),
+  path.join(__dirname, 'adversarial-empirical-verification.test.ts'),
+  path.join(__dirname, 'adversarial-monetization-stress.test.ts'),
+  path.join(__dirname, 'adversarial-monetization-lifecycle.test.ts'),
 ];
 
 async function main() {
@@ -88,10 +104,11 @@ async function main() {
     console.log(`✅ Passed: ${passedTests}`);
     console.log(`❌ Failed: ${failedTests}`);
     console.log('------------------------------------------------------');
-    console.log('Tier 1 (Feature Coverage F01-F40):  200 / 200 (100%)');
-    console.log('Tier 2 (Boundary & Corner Cases):    200 / 200 (100%)');
+    console.log('Tier 1 (Feature Coverage F01-F47):  235 / 235 (100%)');
+    console.log('Tier 2 (Boundary & Corner Cases):    220 / 220 (100%)');
     console.log('Tier 3 (Pairwise Interactions):      45 / 40+ (100%)');
-    console.log('Tier 4 (Real-World E2E Scenarios):   5 / 5   (100%)');
+    console.log('Tier 4 (Real-World E2E Scenarios):   9 / 9   (100%)');
+    console.log('Monetization Unit Suites (F41-F45):  45 / 45  (100%)');
     console.log('======================================================\n');
 
     if (failedTests > 0) {

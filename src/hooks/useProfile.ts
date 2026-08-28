@@ -3,8 +3,9 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { doc, onSnapshot, setDoc, Timestamp, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { getCurrentMonthKey } from '@/lib/usage';
 import { useAuth } from './useAuth';
-import type { UserProfile, UserPreferences } from '@/types';
+import type { UserProfile, UserPreferences, SubscriptionPlan } from '@/types';
 
 const defaultPreferences: UserPreferences = {
   repeatWindowDays: 5,
@@ -37,6 +38,11 @@ export function useProfile() {
             displayName: data.displayName || user.displayName || 'Chef',
             email: data.email || user.email || '',
             photoURL: data.photoURL || user.photoURL || undefined,
+            plan: (data.plan as SubscriptionPlan) || 'free',
+            extractionsThisMonth: typeof data.extractionsThisMonth === 'number' ? data.extractionsThisMonth : 0,
+            extractionMonth: typeof data.extractionMonth === 'string' ? data.extractionMonth : getCurrentMonthKey(),
+            subscriptionId: data.subscriptionId || undefined,
+            subscriptionStatus: data.subscriptionStatus || undefined,
             createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(),
             updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : undefined,
             preferences: {
@@ -54,6 +60,9 @@ export function useProfile() {
             displayName: user.displayName || 'Chef',
             email: user.email || '',
             photoURL: user.photoURL || undefined,
+            plan: 'free',
+            extractionsThisMonth: 0,
+            extractionMonth: getCurrentMonthKey(),
             createdAt: new Date(),
             preferences: defaultPreferences,
           });

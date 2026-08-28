@@ -1,17 +1,20 @@
-# Progress - Milestone 1 Implementation
+# Progress — Worker M1 (Affiliate Shopping Integration)
 
-Last visited: 2026-08-27T20:37:00Z
-Status: Completed
+Last visited: 2026-08-28T12:22:00Z
 
-## Completed Tasks
-- [x] Initialized DISPATCH.md, BRIEFING.md, progress.md
-- [x] Read survey reports and inspected target files
-- [x] Implemented Scope Item 1: Photo Recipe Thumbnail Persistence
-- [x] Implemented Scope Item 2: Tab Query Param Handling (?tab=photo) with Suspense
-- [x] Implemented Scope Item 3: Mobile Layout Z-Index Collision fix on recipe detail page
-- [x] Implemented Scope Item 4: Mobile Navigation Profile / Logout header with Avatar dropdown
-- [x] Implemented Scope Item 5: Google Font Build Fallback with native system font stack
-- [x] Implemented Scope Item 6: Firestore Rules for shoppingLists and shoppingList
-- [x] Implemented Scope Item 7: ESLint / React 19 Fixes across all project files
-- [x] Implemented Scope Item 8: Full verification with tsc (0 errors), npm run build (0 errors), npm run lint (0 errors), and test suite (316 tests pass)
-- [x] Generated handoff.md report
+## Status: COMPLETED
+
+### Completed Steps:
+- [x] Initialized workspace, DISPATCH.md, and BRIEFING.md
+- [x] Implemented `src/lib/affiliate.ts` (`cleanIngredientForSearch`, `buildAmazonFreshUrl`, `buildInstacartUrl`, `AFFILIATE_DISCLOSURE_TEXT`, `extractCleanIngredientNames`, `AFFILIATE_PARTNERS`, `getAffiliateLinks`)
+- [x] Implemented `src/components/shopping/OrderIngredientsButton.tsx` with partner modal, badges, search preview, and FTC disclosure
+- [x] Integrated Order Ingredients CTA and disclosure into `src/app/(app)/shopping-list/page.tsx`
+- [x] Integrated Order Ingredients CTA and disclosure into `src/app/(app)/recipes/[id]/page.tsx`
+- [x] Created comprehensive unit tests in `tests/unit-affiliate-m1.test.ts`
+- [x] Registered test file in `tests/runner.ts`
+- [x] Verified `npx tsc --noEmit` -> 0 errors
+- [x] Verified `npm test` -> 940/940 tests passing (100%)
+- [x] Verified `npm run build` -> clean Next.js 16.3.3 build
+- [x] Verified `npx eslint` -> 0 errors on modified files
+- [x] Updated BRIEFING.md
+- [x] Generated 5-component `handoff.md`
