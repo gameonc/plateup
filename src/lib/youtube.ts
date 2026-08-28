@@ -24,6 +24,40 @@ export interface YouTubeVideoData {
 const BROWSER_UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
 
+// Official Data API. Preferred because it is the only source that returns the
+// description from a datacenter IP — YouTube bot-blocks watch-page scraping
+// from Vercel, so the scrape below silently yields "" in production.
+// Costs 1 quota unit per call against a 10,000/day default.
+// Server-side only: this key must NOT carry a NEXT_PUBLIC_ prefix.
+async function fetchMetaViaDataApi(
+  videoId: string
+): Promise<{ title: string | null; description: string } | null> {
+  const apiKey = process.env.YOUTUBE_API_KEY;
+  if (!apiKey) return null;
+
+  try {
+    const url =
+      `https://www.googleapis.com/youtube/v3/videos` +
+      `?part=snippet&id=${encodeURIComponent(videoId)}&key=${apiKey}`;
+    const resp = await fetch(url);
+    if (!resp.ok) {
+      console.warn(`YouTube Data API returned ${resp.status}; falling back to scrape`);
+      return null;
+    }
+
+    const snippet = (await resp.json())?.items?.[0]?.snippet;
+    if (!snippet) return null;
+
+    return {
+      title: typeof snippet.title === 'string' ? snippet.title : null,
+      description: typeof snippet.description === 'string' ? snippet.description : '',
+    };
+  } catch (error) {
+    console.warn('YouTube Data API unavailable; falling back to scrape:', error);
+    return null;
+  }
+}
+
 // oembed is lightweight, unauthenticated and not bot-blocked, but it never
 // returns a description — only the title.
 async function fetchTitleViaOembed(videoId: string): Promise<string | null> {
@@ -86,21 +120,31 @@ async function scrapeWatchPage(
 export async function extractYouTubeData(videoId: string): Promise<YouTubeVideoData> {
   const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
 
-  // Both sources are independent; run them concurrently and merge.
-  const [oembedTitle, page] = await Promise.all([
-    fetchTitleViaOembed(videoId),
-    scrapeWatchPage(videoId),
-  ]);
+  // Preferred path: the official API works from datacenter IPs.
+  const viaApi = await fetchMetaViaDataApi(videoId);
 
-  const title = oembedTitle || page.title || 'Unknown Video';
-  const description = page.description;
+  let title = viaApi?.title ?? null;
+  let description = viaApi?.description ?? '';
+
+  // Fallback for when YOUTUBE_API_KEY is unset or the call failed. Works
+  // locally; the description half is usually blocked from Vercel.
+  if (!description) {
+    const [oembedTitle, page] = await Promise.all([
+      fetchTitleViaOembed(videoId),
+      scrapeWatchPage(videoId),
+    ]);
+    title = title ?? oembedTitle ?? page.title;
+    description = page.description;
+  }
+
+  const resolvedTitle = title ?? 'Unknown Video';
 
   return {
-    title,
+    title: resolvedTitle,
     description,
     thumbnailUrl,
     transcript: description
-      ? `VIDEO TITLE: ${title}\n\nVIDEO DESCRIPTION:\n${description}`
+      ? `VIDEO TITLE: ${resolvedTitle}\n\nVIDEO DESCRIPTION:\n${description}`
       : '',
   };
 }

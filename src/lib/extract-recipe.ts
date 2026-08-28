@@ -1,4 +1,4 @@
-import { recipeModel, YOUTUBE_RECIPE_PROMPT, IMAGE_RECIPE_PROMPT } from './ai';
+import { recipeModel, generateWithRetry, YOUTUBE_RECIPE_PROMPT, IMAGE_RECIPE_PROMPT } from './ai';
 import type { DietaryRestriction } from '@/types';
 
 export interface ExtractedRecipe {
@@ -104,7 +104,7 @@ Extract:
 
 Watch the entire video carefully and extract every ingredient and instruction.`;
 
-  const result = await recipeModel.generateContent({
+  const result = await generateWithRetry(() => recipeModel.generateContent({
     contents: [{
       role: 'user',
       parts: [
@@ -117,7 +117,7 @@ Watch the entire video carefully and extract every ingredient and instruction.`;
         },
       ],
     }],
-  });
+  }));
 
   const jsonText = result.response.text();
   const cleanJson = jsonText.replace(/```(?:json)?\n?/g, '').replace(/```/g, '').trim();
@@ -144,7 +144,7 @@ export async function extractRecipeFromTranscript(
     .replace('{description}', description)
     .replace('{transcript}', transcript.substring(0, 15000));
   
-  const result = await recipeModel.generateContent(prompt);
+  const result = await generateWithRetry(() => recipeModel.generateContent(prompt));
   const jsonText = result.response.text();
   const cleanJson = jsonText.replace(/```(?:json)?\n?/g, '').replace(/```/g, '').trim();
   
@@ -168,7 +168,7 @@ export async function extractRecipeFromImage(
     throw new Error('Invalid file type. Please provide an image.');
   }
 
-  const result = await recipeModel.generateContent({
+  const result = await generateWithRetry(() => recipeModel.generateContent({
     contents: [{
       role: 'user',
       parts: [
@@ -181,7 +181,7 @@ export async function extractRecipeFromImage(
         },
       ],
     }],
-  });
+  }));
   const jsonText = result.response.text();
   const cleanJson = jsonText.replace(/```(?:json)?\n?/g, '').replace(/```/g, '').trim();
   

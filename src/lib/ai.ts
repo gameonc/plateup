@@ -38,6 +38,50 @@ const recipeSchema = {
   required: ['name', 'prepTimeMinutes', 'cookTimeMinutes', 'servings', 'difficulty', 'tags', 'ingredients', 'instructions'],
 };
 
+/**
+ * Gemini occasionally returns transient 5xx ("model is currently experiencing
+ * high demand") and rate-limit 429s. Those succeed on a retry; a 429 caused by
+ * depleted credits will not, so it is surfaced immediately rather than retried.
+ */
+const RETRYABLE_STATUSES = new Set([500, 502, 503, 504, 429]);
+
+function statusFromError(error: unknown): number | null {
+  const message = error instanceof Error ? error.message : String(error ?? '');
+  const match = message.match(/\[(\d{3})\s*\]/);
+  return match ? Number(match[1]) : null;
+}
+
+function isRetryable(error: unknown, status: number | null): boolean {
+  if (status === null || !RETRYABLE_STATUSES.has(status)) return false;
+
+  // Depleted credits present as 429 but never recover on retry.
+  const message = (error instanceof Error ? error.message : '').toLowerCase();
+  if (status === 429 && /credit|quota|billing|depleted/.test(message)) return false;
+
+  return true;
+}
+
+export async function generateWithRetry<T>(
+  call: () => Promise<T>,
+  attempts = 3,
+  baseDelayMs = 800
+): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await call();
+    } catch (error) {
+      const status = statusFromError(error);
+      if (attempt >= attempts - 1 || !isRetryable(error, status)) throw error;
+
+      const delay = baseDelayMs * 2 ** attempt;
+      console.warn(
+        `Gemini returned ${status}; retrying in ${delay}ms (attempt ${attempt + 2}/${attempts})`
+      );
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+}
+
 // Create the model configured for recipe JSON output
 export const recipeModel = genAI.getGenerativeModel({
   model: 'gemini-3.6-flash',
