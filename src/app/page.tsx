@@ -13,7 +13,6 @@ import {
   ShoppingCart, 
   ArrowRight, 
   Check, 
-  Star, 
   ChefHat, 
   Clock, 
   Flame, 
@@ -118,23 +117,19 @@ export default function LandingPage() {
             </Link>
           </div>
 
-          {/* Social Proof Snippet */}
-          <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-10 text-stone-600 text-sm font-medium mb-12">
-            <div className="flex items-center gap-1.5">
-              <div className="flex text-amber-500">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="w-4 h-4 fill-amber-500" />
-                ))}
-              </div>
-              <span className="font-semibold text-stone-900">4.9/5</span> from home cooks
-            </div>
-            <div className="flex items-center gap-2">
+          {/* Feature Pills */}
+          <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 text-stone-600 text-sm font-medium mb-12">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-full border border-stone-200 shadow-xs">
               <ShieldCheck className="w-4 h-4 text-emerald-600" />
-              <span>No credit card required</span>
+              <span>100% Free</span>
             </div>
-            <div className="flex items-center gap-2">
-              <Flame className="w-4 h-4 text-orange-600" />
-              <span>50,000+ recipes planned</span>
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-full border border-stone-200 shadow-xs">
+              <Sparkles className="w-4 h-4 text-orange-600" />
+              <span>Powered by Google Gemini</span>
+            </div>
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-full border border-stone-200 shadow-xs">
+              <Flame className="w-4 h-4 text-red-500" />
+              <span>No Credit Card Required</span>
             </div>
           </div>
 
@@ -350,84 +345,51 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Testimonials / Social Proof */}
+        {/* How It Works */}
         <section className="px-4 sm:px-6 lg:px-8 py-20 bg-white border-t border-stone-200">
           <div className="max-w-7xl mx-auto">
             <div className="text-center max-w-2xl mx-auto mb-14">
               <h2 className="text-3xl font-extrabold text-stone-900 tracking-tight mb-3">
-                Loved by busy home chefs
+                How PlateUp Works
               </h2>
               <p className="text-stone-600">
-                Here is how PlateUp transforms weeknight cooking for real households.
+                From video to dinner table in three simple steps.
               </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <Card className="border-stone-200 shadow-xs p-6 flex flex-col justify-between rounded-2xl bg-stone-50/50">
-                <div className="space-y-4">
-                  <div className="flex text-amber-500">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="w-4 h-4 fill-amber-500" />
-                    ))}
-                  </div>
-                  <p className="text-stone-700 text-sm sm:text-base leading-relaxed italic">
-                    &quot;I used to bookmark dozens of YouTube cooking videos that I never actually made. PlateUp extracts the recipe in 5 seconds and puts it right into my grocery list.&quot;
-                  </p>
+              {/* Step 1 */}
+              <div className="text-center space-y-4">
+                <div className="w-16 h-16 bg-orange-100 text-primary rounded-2xl flex items-center justify-center mx-auto shadow-sm">
+                  <span className="text-2xl font-extrabold">1</span>
                 </div>
-                <div className="pt-6 border-t border-stone-200/60 mt-6 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-orange-200 text-primary font-bold flex items-center justify-center text-sm">
-                    SK
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-stone-900 text-sm">Sarah K.</h4>
-                    <p className="text-xs text-stone-500">Home Cook & Parent of 2</p>
-                  </div>
-                </div>
-              </Card>
+                <h3 className="text-xl font-bold text-stone-900">Extract a Recipe</h3>
+                <p className="text-stone-600 text-sm leading-relaxed">
+                  Paste a YouTube cooking video URL or snap a photo of any dish. Our AI extracts the full recipe with ingredients and step-by-step instructions.
+                </p>
+              </div>
 
-              <Card className="border-stone-200 shadow-xs p-6 flex flex-col justify-between rounded-2xl bg-stone-50/50">
-                <div className="space-y-4">
-                  <div className="flex text-amber-500">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="w-4 h-4 fill-amber-500" />
-                    ))}
-                  </div>
-                  <p className="text-stone-700 text-sm sm:text-base leading-relaxed italic">
-                    &quot;The meal plan auto-fill is a game changer. It makes sure we don&apos;t eat the same chicken dish twice in one week and generates our grocery list with all duplicate garlic and onions combined.&quot;
-                  </p>
+              {/* Step 2 */}
+              <div className="text-center space-y-4">
+                <div className="w-16 h-16 bg-amber-100 text-amber-700 rounded-2xl flex items-center justify-center mx-auto shadow-sm">
+                  <span className="text-2xl font-extrabold">2</span>
                 </div>
-                <div className="pt-6 border-t border-stone-200/60 mt-6 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-amber-200 text-amber-800 font-bold flex items-center justify-center text-sm">
-                    MR
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-stone-900 text-sm">Marcus R.</h4>
-                    <p className="text-xs text-stone-500">Fitness Enthusiast (Keto)</p>
-                  </div>
-                </div>
-              </Card>
+                <h3 className="text-xl font-bold text-stone-900">Plan Your Week</h3>
+                <p className="text-stone-600 text-sm leading-relaxed">
+                  Drag recipes into your weekly meal calendar or let auto-fill build a balanced plan. PlateUp avoids repeating the same meals and respects your dietary preferences.
+                </p>
+              </div>
 
-              <Card className="border-stone-200 shadow-xs p-6 flex flex-col justify-between rounded-2xl bg-stone-50/50">
-                <div className="space-y-4">
-                  <div className="flex text-amber-500">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="w-4 h-4 fill-amber-500" />
-                    ))}
-                  </div>
-                  <p className="text-stone-700 text-sm sm:text-base leading-relaxed italic">
-                    &quot;Snapping a photo of a restaurant meal and having PlateUp identify the ingredients and steps to recreate it at home feels like pure magic.&quot;
-                  </p>
+              {/* Step 3 */}
+              <div className="text-center space-y-4">
+                <div className="w-16 h-16 bg-emerald-100 text-emerald-700 rounded-2xl flex items-center justify-center mx-auto shadow-sm">
+                  <span className="text-2xl font-extrabold">3</span>
                 </div>
-                <div className="pt-6 border-t border-stone-200/60 mt-6 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-emerald-200 text-emerald-800 font-bold flex items-center justify-center text-sm">
-                    EL
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-stone-900 text-sm">Elena L.</h4>
-                    <p className="text-xs text-stone-500">Culinary Blogger</p>
-                  </div>
-                </div>
-              </Card>
+                <h3 className="text-xl font-bold text-stone-900">Shop & Cook</h3>
+                <p className="text-stone-600 text-sm leading-relaxed">
+                  Generate a smart grocery list that combines duplicate ingredients across all your planned meals. Check off items as you shop, then cook with confidence.
+                </p>
+              </div>
             </div>
           </div>
         </section>
@@ -484,7 +446,7 @@ export default function LandingPage() {
               Ready to take the stress out of dinner?
             </h2>
             <p className="text-lg sm:text-xl text-orange-100 max-w-2xl mx-auto font-normal">
-              Join thousands of home cooks who extract recipes, plan meals, and shop smarter with PlateUp.
+              Stop stressing about what to cook. Extract recipes, plan your week, and shop smarter — all in one app.
             </p>
             <div className="pt-4">
               <Link href="/login">
