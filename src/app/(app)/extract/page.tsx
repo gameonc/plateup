@@ -3,7 +3,7 @@
 import React, { useState, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useRecipes } from '@/hooks/useRecipes';
-import { extractRecipeFromTranscript, extractRecipeFromImage, ExtractedRecipe } from '@/lib/extract-recipe';
+import { extractRecipeFromYouTubeUrl, extractRecipeFromImage, ExtractedRecipe } from '@/lib/extract-recipe';
 import { RecipePreview } from '@/components/recipe/RecipePreview';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
@@ -80,31 +80,10 @@ function ExtractRecipeContent() {
     setCurrentSource('youtube');
 
     try {
-      // 1. Call API to get transcript
-      const response = await fetch('/api/youtube-recipe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: youtubeUrl })
-      });
+      setThumbnailUrl(`https://img.youtube.com/vi/${youtubeVideoId}/hqdefault.jpg`);
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to extract recipe from this video.');
-      }
-      
-      if (!data.transcript) {
-        throw new Error('Could not extract content from this video. Try a different cooking video.');
-      }
-
-      setThumbnailUrl(data.thumbnailUrl || `https://img.youtube.com/vi/${youtubeVideoId}/hqdefault.jpg`);
-
-      // 2. Call Gemini to parse the recipe
-      const recipe = await extractRecipeFromTranscript(
-        data.title, 
-        data.description, 
-        data.transcript
-      );
+      // Call Gemini directly with the YouTube URL — it watches the video natively
+      const recipe = await extractRecipeFromYouTubeUrl(youtubeUrl);
 
       setExtractedRecipe(recipe);
       

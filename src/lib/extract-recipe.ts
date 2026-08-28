@@ -81,7 +81,49 @@ function processExtractedRecipe(raw: Record<string, unknown>): ExtractedRecipe {
 }
 
 /**
- * Extract recipe from YouTube video transcript using Gemini AI
+ * Extract recipe from YouTube video by passing the URL directly to Gemini.
+ * Gemini 2.5 Flash can watch YouTube videos natively — no transcript scraping needed.
+ */
+export async function extractRecipeFromYouTubeUrl(
+  youtubeUrl: string
+): Promise<ExtractedRecipe> {
+  const videoPart = {
+    fileData: {
+      fileUri: youtubeUrl,
+      mimeType: 'video/mp4',
+    },
+  };
+
+  const prompt = `You are a professional chef and recipe extractor. Watch this YouTube cooking video and extract the complete recipe.
+
+Extract:
+- Recipe name
+- Description
+- Prep time and cook time in minutes
+- Number of servings
+- Difficulty (easy/medium/hard)
+- All ingredients with exact amounts and units
+- Step-by-step cooking instructions
+- Relevant tags (cuisine, meal type)
+- Dietary tags from this list: 'vegetarian', 'vegan', 'gluten-free', 'dairy-free', 'keto', 'low-carb', 'pescatarian', 'nut-free'
+
+If the video shows a cooking process, extract every ingredient and instruction you can see and hear.`;
+
+  const result = await recipeModel.generateContent([prompt, videoPart]);
+  const jsonText = result.response.text();
+  const cleanJson = jsonText.replace(/```(?:json)?\n?/g, '').replace(/```/g, '').trim();
+  
+  try {
+    const raw = JSON.parse(cleanJson);
+    return processExtractedRecipe(raw);
+  } catch (error) {
+    console.error('Failed to parse Gemini recipe output:', jsonText, error);
+    throw new Error('Failed to parse the recipe from the AI response.');
+  }
+}
+
+/**
+ * Extract recipe from YouTube video transcript using Gemini AI (legacy fallback)
  */
 export async function extractRecipeFromTranscript(
   title: string,
@@ -91,7 +133,7 @@ export async function extractRecipeFromTranscript(
   const prompt = YOUTUBE_RECIPE_PROMPT
     .replace('{title}', title)
     .replace('{description}', description)
-    .replace('{transcript}', transcript.substring(0, 15000)); // Limit transcript length to avoid token limits
+    .replace('{transcript}', transcript.substring(0, 15000));
   
   const result = await recipeModel.generateContent(prompt);
   const jsonText = result.response.text();
@@ -113,7 +155,6 @@ export async function extractRecipeFromImage(
   imageBase64: string,
   mimeType: string
 ): Promise<ExtractedRecipe> {
-  // Check MIME type is supported
   if (!mimeType.startsWith('image/')) {
     throw new Error('Invalid file type. Please provide an image.');
   }
@@ -137,4 +178,3 @@ export async function extractRecipeFromImage(
     throw new Error('Failed to parse the recipe from the AI response.');
   }
 }
-
