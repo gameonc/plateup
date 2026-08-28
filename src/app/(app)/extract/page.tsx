@@ -3,7 +3,7 @@
 import React, { useState, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useRecipes } from '@/hooks/useRecipes';
-import { extractRecipeFromYouTubeUrl, extractRecipeFromImage, ExtractedRecipe } from '@/lib/extract-recipe';
+import { extractRecipeFromYouTube, extractRecipeFromImage, ExtractedRecipe } from '@/lib/extract-recipe';
 import { RecipePreview } from '@/components/recipe/RecipePreview';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
@@ -36,6 +36,7 @@ function ExtractRecipeContent() {
   const [youtubeVideoId, setYoutubeVideoId] = useState<string | null>(null);
   const [isExtractingYoutube, setIsExtractingYoutube] = useState(false);
   const [youtubeError, setYoutubeError] = useState<string | null>(null);
+  const [isWatchingVideo, setIsWatchingVideo] = useState(false);
 
   // Photo State
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -78,12 +79,16 @@ function ExtractRecipeContent() {
     setExtractedRecipe(null);
     setIsSaved(false);
     setCurrentSource('youtube');
+    setIsWatchingVideo(false);
 
     try {
       setThumbnailUrl(`https://img.youtube.com/vi/${youtubeVideoId}/hqdefault.jpg`);
 
-      // Call Gemini directly with the YouTube URL — it watches the video natively
-      const recipe = await extractRecipeFromYouTubeUrl(youtubeUrl);
+      // Reads the video description first; falls back to Gemini watching the
+      // video when the description has no usable recipe.
+      const recipe = await extractRecipeFromYouTube(youtubeUrl, () =>
+        setIsWatchingVideo(true)
+      );
 
       setExtractedRecipe(recipe);
       
@@ -92,6 +97,7 @@ function ExtractRecipeContent() {
       setYoutubeError(error instanceof Error ? error.message : 'An unexpected error occurred');
     } finally {
       setIsExtractingYoutube(false);
+      setIsWatchingVideo(false);
     }
   };
 
@@ -289,9 +295,13 @@ function ExtractRecipeContent() {
                           <Sparkles className="h-8 w-8 animate-pulse" />
                         </div>
                       </div>
-                      <h3 className="text-lg font-medium text-slate-800">AI is analyzing the video...</h3>
+                      <h3 className="text-lg font-medium text-slate-800">
+                        {isWatchingVideo ? 'AI is watching the video...' : 'AI is analyzing the video...'}
+                      </h3>
                       <p className="text-slate-500 text-sm mt-2 max-w-sm">
-                        This usually takes about 10-20 seconds as we read the transcript and extract the ingredients and steps.
+                        {isWatchingVideo
+                          ? 'No ingredient list in the description, so we\'re watching the video itself. This takes a little longer.'
+                          : 'This usually takes a few seconds as we pull the ingredients and steps.'}
                       </p>
                     </div>
                   )}

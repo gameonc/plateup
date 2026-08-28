@@ -40,7 +40,7 @@ const recipeSchema = {
 
 // Create the model configured for recipe JSON output
 export const recipeModel = genAI.getGenerativeModel({
-  model: 'gemini-2.5-flash',
+  model: 'gemini-3.6-flash',
   generationConfig: {
     responseMimeType: 'application/json',
     responseSchema: recipeSchema as any, // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -50,7 +50,7 @@ export const recipeModel = genAI.getGenerativeModel({
 
 // Create a general model for meal planning suggestions
 export const chatModel = genAI.getGenerativeModel({
-  model: 'gemini-2.5-flash',
+  model: 'gemini-3.6-flash',
   generationConfig: {
     temperature: 0.7,
   },

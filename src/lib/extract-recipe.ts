@@ -193,3 +193,67 @@ export async function extractRecipeFromImage(
     throw new Error('Failed to parse the recipe from the AI response.');
   }
 }
+
+/**
+ * Measurement vocabulary mirrors the ingredient terms already used by
+ * detectDietaryTags, kept deliberately narrow so promo blurbs don't register.
+ */
+const MEASUREMENT_PATTERN =
+  /\d+\s*(?:cups?|tbsp|tsp|tablespoons?|teaspoons?|oz|ounces?|lbs?|pounds?|cloves?|grams?|ml|sticks?|pints?|quarts?)\b/gi;
+
+/** A description only counts as a recipe source if it carries real quantities. */
+function hasRecipeSignal(text: string): boolean {
+  return (text.match(MEASUREMENT_PATTERN) || []).length >= 3;
+}
+
+/** Guard against the cheap path returning a plausible-looking but empty recipe. */
+function isThinRecipe(recipe: ExtractedRecipe): boolean {
+  return recipe.ingredients.length < 3 || recipe.instructions.length === 0;
+}
+
+/**
+ * Layered YouTube extraction.
+ *
+ * Many cooking channels publish the full ingredient list in the video
+ * description, which is far cheaper and faster to read than having Gemini watch
+ * the video. So: try the description first, and fall back to the video whenever
+ * that path is unavailable, unconvincing, or produces a thin result.
+ *
+ * The description must be fetched server-side — the browser cannot fetch
+ * youtube.com directly (CORS).
+ *
+ * @param onEscalate called when falling back to the (slower) video path, so the
+ *                   UI can explain the wait.
+ */
+export async function extractRecipeFromYouTube(
+  youtubeUrl: string,
+  onEscalate?: () => void
+): Promise<ExtractedRecipe> {
+  try {
+    const response = await fetch('/api/youtube-recipe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: youtubeUrl }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+
+      if (typeof data?.transcript === 'string' && hasRecipeSignal(data.transcript)) {
+        const recipe = await extractRecipeFromTranscript(
+          data.title ?? '',
+          data.description ?? '',
+          data.transcript
+        );
+
+        if (!isThinRecipe(recipe)) return recipe;
+      }
+    }
+  } catch (error) {
+    // A failure here is never fatal — it just means we take the video path.
+    console.warn('Description path unavailable, escalating to video:', error);
+  }
+
+  onEscalate?.();
+  return extractRecipeFromYouTubeUrl(youtubeUrl);
+}
