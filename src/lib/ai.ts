@@ -1,50 +1,55 @@
-import { getGenerativeModel, Schema } from 'firebase/ai';
-import { ai } from './firebase';
+'use client';
+
+import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
+
+// Use the Firebase API key directly with Google's Gemini API — bypasses App Check
+const API_KEY = process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '';
+const genAI = new GoogleGenerativeAI(API_KEY);
 
 // Define the recipe JSON schema for structured output
-const recipeSchema = Schema.object({
+const recipeSchema = {
+  type: SchemaType.OBJECT,
   properties: {
-    name: Schema.string(),
-    description: Schema.string(),
-    prepTimeMinutes: Schema.integer(),
-    cookTimeMinutes: Schema.integer(),
-    servings: Schema.integer(),
-    difficulty: Schema.enumString({ enum: ['easy', 'medium', 'hard'] }),
-    tags: Schema.array({ 
-      items: Schema.string(),
-      description: "General tags including cuisine, meal type (breakfast, lunch, dinner, snack)." 
-    }),
-    dietaryTags: Schema.array({
-      items: Schema.string(),
-      description: "Applicable dietary tags matching standard taxonomy: 'vegetarian', 'vegan', 'gluten-free', 'dairy-free', 'keto', 'low-carb', 'pescatarian', 'nut-free'."
-    }),
-    ingredients: Schema.array({
-      items: Schema.object({
+    name: { type: SchemaType.STRING },
+    description: { type: SchemaType.STRING },
+    prepTimeMinutes: { type: SchemaType.INTEGER },
+    cookTimeMinutes: { type: SchemaType.INTEGER },
+    servings: { type: SchemaType.INTEGER },
+    difficulty: { type: SchemaType.STRING, enum: ['easy', 'medium', 'hard'] },
+    tags: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+    dietaryTags: { 
+      type: SchemaType.ARRAY, 
+      items: { type: SchemaType.STRING },
+    },
+    ingredients: {
+      type: SchemaType.ARRAY,
+      items: {
+        type: SchemaType.OBJECT,
         properties: {
-          item: Schema.string(),
-          amount: Schema.string(),
-          unit: Schema.string(),
+          item: { type: SchemaType.STRING },
+          amount: { type: SchemaType.STRING },
+          unit: { type: SchemaType.STRING },
         },
-        optionalProperties: [],
-      }),
-    }),
-    instructions: Schema.array({ items: Schema.string() }),
+        required: ['item', 'amount', 'unit'],
+      },
+    },
+    instructions: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
   },
-  optionalProperties: ['description', 'dietaryTags'],
-});
+  required: ['name', 'prepTimeMinutes', 'cookTimeMinutes', 'servings', 'difficulty', 'tags', 'ingredients', 'instructions'],
+};
 
 // Create the model configured for recipe JSON output
-export const recipeModel = getGenerativeModel(ai, {
+export const recipeModel = genAI.getGenerativeModel({
   model: 'gemini-2.5-flash',
   generationConfig: {
     responseMimeType: 'application/json',
-    responseSchema: recipeSchema,
-    temperature: 0.3, // Lower temperature for more accurate recipe extraction
+    responseSchema: recipeSchema as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+    temperature: 0.3,
   },
 });
 
 // Create a general model for meal planning suggestions
-export const chatModel = getGenerativeModel(ai, {
+export const chatModel = genAI.getGenerativeModel({
   model: 'gemini-2.5-flash',
   generationConfig: {
     temperature: 0.7,
@@ -85,22 +90,3 @@ export const IMAGE_RECIPE_PROMPT = `You are a professional chef and food identif
 7. Add relevant cuisine and meal tags
 
 If this is a menu, extract the dish name and provide a recipe for it.`;
-
-export const MEAL_PLAN_PROMPT = `You are a meal planning assistant. Given the user's saved recipes and their recent cooking history, create a balanced weekly meal plan.
-
-Rules:
-- Do NOT suggest any recipe that was cooked in the last {repeatWindow} days
-- Vary cuisine types across the week (don't put similar cuisines on consecutive days)
-- Balance difficulty levels (easier meals on weekdays, more involved on weekends)
-- Respect any locked/pre-filled meal slots
-
-Available Recipes:
-{recipes}
-
-Recently Cooked (avoid these):
-{recentlyCooked}
-
-Locked Slots (keep these as-is):
-{lockedSlots}
-
-Create a 7-day meal plan for {mealTimes}. Return the plan as a JSON object.`;

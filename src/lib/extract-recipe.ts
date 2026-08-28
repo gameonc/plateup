@@ -87,29 +87,38 @@ function processExtractedRecipe(raw: Record<string, unknown>): ExtractedRecipe {
 export async function extractRecipeFromYouTubeUrl(
   youtubeUrl: string
 ): Promise<ExtractedRecipe> {
-  const videoPart = {
-    fileData: {
-      fileUri: youtubeUrl,
-      mimeType: 'video/mp4',
-    },
-  };
-
   const prompt = `You are a professional chef and recipe extractor. Watch this YouTube cooking video and extract the complete recipe.
+
+YouTube Video URL: ${youtubeUrl}
 
 Extract:
 - Recipe name
-- Description
+- Description of the dish
 - Prep time and cook time in minutes
 - Number of servings
 - Difficulty (easy/medium/hard)
 - All ingredients with exact amounts and units
 - Step-by-step cooking instructions
-- Relevant tags (cuisine, meal type)
-- Dietary tags from this list: 'vegetarian', 'vegan', 'gluten-free', 'dairy-free', 'keto', 'low-carb', 'pescatarian', 'nut-free'
+- Relevant tags (cuisine type, meal type like breakfast/lunch/dinner)
+- Dietary tags from: 'vegetarian', 'vegan', 'gluten-free', 'dairy-free', 'keto', 'low-carb', 'pescatarian', 'nut-free'
 
-If the video shows a cooking process, extract every ingredient and instruction you can see and hear.`;
+Watch the entire video carefully and extract every ingredient and instruction.`;
 
-  const result = await recipeModel.generateContent([prompt, videoPart]);
+  const result = await recipeModel.generateContent({
+    contents: [{
+      role: 'user',
+      parts: [
+        { text: prompt },
+        {
+          fileData: {
+            fileUri: youtubeUrl,
+            mimeType: 'video/*',
+          },
+        },
+      ],
+    }],
+  });
+
   const jsonText = result.response.text();
   const cleanJson = jsonText.replace(/```(?:json)?\n?/g, '').replace(/```/g, '').trim();
   
@@ -159,14 +168,20 @@ export async function extractRecipeFromImage(
     throw new Error('Invalid file type. Please provide an image.');
   }
 
-  const imagePart = {
-    inlineData: {
-      data: imageBase64,
-      mimeType,
-    },
-  };
-  
-  const result = await recipeModel.generateContent([IMAGE_RECIPE_PROMPT, imagePart]);
+  const result = await recipeModel.generateContent({
+    contents: [{
+      role: 'user',
+      parts: [
+        { text: IMAGE_RECIPE_PROMPT },
+        {
+          inlineData: {
+            data: imageBase64,
+            mimeType,
+          },
+        },
+      ],
+    }],
+  });
   const jsonText = result.response.text();
   const cleanJson = jsonText.replace(/```(?:json)?\n?/g, '').replace(/```/g, '').trim();
   
