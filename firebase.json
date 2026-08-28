@@ -7,7 +7,8 @@
     "authorizedDomains": [
       "localhost",
       "plateup-ai-2026.firebaseapp.com",
-      "plateup-ai-2026.web.app"
+      "plateup-ai-2026.web.app",
+      "plateup-two.vercel.app"
     ],
     "providers": {
       "emailPassword": true,
