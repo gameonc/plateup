@@ -45,8 +45,10 @@ export function Footer() {
           made through links on this site at no additional cost to you.
         </p>
 
-        <p className="mt-3">
-          Uses YouTube API Services.
+        <p className="mt-3 flex items-center gap-2">
+          <span>Uses YouTube API Services.</span>
+          <span className="text-stone-400">•</span>
+          <span>© {new Date().getFullYear()} <span className="font-semibold text-stone-700">CLD Technology</span></span>
         </p>
       </div>
     </footer>

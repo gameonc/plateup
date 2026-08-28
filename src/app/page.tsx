@@ -508,7 +508,7 @@ export default function LandingPage() {
               <ChefHat className="w-4 h-4" />
             </div>
             <span className="font-bold text-stone-900">PlateUp</span>
-            <span className="text-xs text-stone-400 ml-2">© {new Date().getFullYear()} PlateUp. All rights reserved.</span>
+            <span className="text-xs text-stone-400 ml-2">© {new Date().getFullYear()} CLD Technology. All rights reserved.</span>
           </div>
 
           <div className="flex items-center gap-6 text-sm text-stone-500">
@@ -518,7 +518,7 @@ export default function LandingPage() {
             <Link href="/login" className="hover:text-primary transition-colors">Sign In</Link>
             <Link href="/login" className="hover:text-primary transition-colors">Sign Up</Link>
             <span className="flex items-center gap-1 text-stone-400">
-              Built with <Utensils className="w-3.5 h-3.5 text-primary inline" /> & AI
+              Built by <span className="font-semibold text-stone-600">CLD Technology</span>
             </span>
           </div>
         </div>
