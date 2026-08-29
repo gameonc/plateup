@@ -342,12 +342,12 @@ function ExtractRecipeContent() {
                           </div>
                         </div>
                         <h3 className="text-lg font-medium text-slate-800">
-                          {isWatchingVideo ? 'AI is watching the video...' : 'AI is analyzing the video...'}
+                          {isWatchingVideo ? '👨‍🍳 Chef is watching the video...' : '👨‍🍳 Chef is analyzing this recipe...'}
                         </h3>
                         <p className="text-slate-500 text-sm mt-2 max-w-sm">
                           {isWatchingVideo
-                            ? 'No ingredient list in the description, so we\'re watching the video itself. This takes a little longer.'
-                            : 'This usually takes a few seconds as we pull the ingredients and steps.'}
+                            ? 'No ingredient list found in the description, so our chef is watching the full video. Hang tight!'
+                            : 'Our chef is pulling out all the ingredients and steps. Just a few seconds!'}
                         </p>
                       </div>
                     )}
@@ -461,9 +461,9 @@ function ExtractRecipeContent() {
                             <ImageIcon className="h-8 w-8 animate-pulse" />
                           </div>
                         </div>
-                        <h3 className="text-lg font-medium text-slate-800">AI is identifying the dish...</h3>
+                        <h3 className="text-lg font-medium text-slate-800">👨‍🍳 Chef is analyzing this dish...</h3>
                         <p className="text-slate-500 text-sm mt-2 max-w-sm">
-                          This takes a few seconds while we analyze the image and generate the recipe.
+                          Our chef is identifying the food and building you a complete recipe. Just a moment!
                         </p>
                       </div>
                     )}

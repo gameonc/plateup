@@ -42,6 +42,39 @@ export default function RecipeDetailPage() {
   const [isMarkingMade, setIsMarkingMade] = useState(false);
   const [isAddingToList, setIsAddingToList] = useState(false);
   const [checkedIngredients, setCheckedIngredients] = useState<Record<number, boolean>>({});
+  const [adjustedServings, setAdjustedServings] = useState<number | null>(null);
+
+  const originalServings = recipe?.servings || 4;
+  const currentServings = adjustedServings ?? originalServings;
+  const scale = currentServings / originalServings;
+
+  // Scale an ingredient amount string (e.g., "2" → "4", "1/2" → "1")
+  const scaleAmount = (amount: string): string => {
+    if (scale === 1 || !amount) return amount;
+    // Handle fractions like "1/2", "3/4"
+    const fractionMatch = amount.match(/^(\d+)\/(\d+)$/);
+    if (fractionMatch) {
+      const num = (parseInt(fractionMatch[1]) / parseInt(fractionMatch[2])) * scale;
+      if (num % 1 === 0) return num.toString();
+      // Convert back to nice fraction if possible
+      return num.toFixed(1).replace(/\.0$/, '');
+    }
+    // Handle mixed numbers like "1 1/2"
+    const mixedMatch = amount.match(/^(\d+)\s+(\d+)\/(\d+)$/);
+    if (mixedMatch) {
+      const num = (parseInt(mixedMatch[1]) + parseInt(mixedMatch[2]) / parseInt(mixedMatch[3])) * scale;
+      if (num % 1 === 0) return num.toString();
+      return num.toFixed(1).replace(/\.0$/, '');
+    }
+    // Handle plain numbers
+    const num = parseFloat(amount);
+    if (!isNaN(num)) {
+      const scaled = num * scale;
+      if (scaled % 1 === 0) return scaled.toString();
+      return scaled.toFixed(1).replace(/\.0$/, '');
+    }
+    return amount; // Can't parse — return as-is
+  };
 
   const handleAddToList = async () => {
     if (!recipe) return;
@@ -244,8 +277,33 @@ export default function RecipeDetailPage() {
             </div>
             <div className="flex flex-col items-center justify-center p-3 bg-stone-50 rounded-xl border border-stone-100">
               <Users className="w-5 h-5 text-blue-600 mb-1" />
-              <span className="text-[10px] text-stone-500 font-bold uppercase tracking-wider">Yield</span>
-              <span className="font-bold text-stone-900 text-sm">{recipe.servings || "-"} servings</span>
+              <span className="text-[10px] text-stone-500 font-bold uppercase tracking-wider">Servings</span>
+              <div className="flex items-center gap-2 mt-0.5">
+                <button
+                  type="button"
+                  onClick={() => setAdjustedServings(Math.max(1, currentServings - 1))}
+                  className="w-6 h-6 rounded-full bg-stone-200 hover:bg-stone-300 text-stone-700 font-bold text-sm flex items-center justify-center cursor-pointer transition-colors"
+                >
+                  −
+                </button>
+                <span className="font-bold text-stone-900 text-sm min-w-[2ch] text-center">{currentServings}</span>
+                <button
+                  type="button"
+                  onClick={() => setAdjustedServings(currentServings + 1)}
+                  className="w-6 h-6 rounded-full bg-primary hover:bg-orange-600 text-white font-bold text-sm flex items-center justify-center cursor-pointer transition-colors"
+                >
+                  +
+                </button>
+              </div>
+              {scale !== 1 && (
+                <button
+                  type="button"
+                  onClick={() => setAdjustedServings(null)}
+                  className="text-[9px] text-primary font-semibold mt-1 hover:underline cursor-pointer"
+                >
+                  Reset
+                </button>
+              )}
             </div>
             <div className="flex flex-col items-center justify-center p-3 bg-stone-50 rounded-xl border border-stone-100">
               <ChefHat className="w-5 h-5 text-purple-600 mb-1" />
@@ -310,7 +368,7 @@ export default function RecipeDetailPage() {
                       {checkedIngredients[idx] && <Check className="w-3.5 h-3.5" />}
                     </div>
                     <span className={`text-sm transition-colors ${checkedIngredients[idx] ? 'line-through text-stone-400' : 'text-stone-800'}`}>
-                      {ingredient.amount && <span className="font-semibold mr-1">{ingredient.amount}</span>}
+                      {ingredient.amount && <span className={`font-semibold mr-1 ${scale !== 1 ? 'text-primary' : ''}`}>{scaleAmount(ingredient.amount)}</span>}
                       {ingredient.unit && <span className="text-stone-500 mr-1">{ingredient.unit}</span>}
                       {ingredient.item}
                     </span>
