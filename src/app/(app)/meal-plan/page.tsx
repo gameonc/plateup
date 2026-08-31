@@ -17,7 +17,8 @@ import {
   ChefHat, 
   ShoppingBag, 
   Leaf,
-  Sliders
+  Sliders,
+  Loader2
 } from 'lucide-react';
 import { useMealPlan } from '@/hooks/useMealPlan';
 import { useRecipes } from '@/hooks/useRecipes';
@@ -27,7 +28,14 @@ import { generateMealPlan, DAYS_OF_WEEK, MEAL_TIMES, formatDayName, formatMealTi
 import { getDietaryBadgeClass } from '@/components/recipe/RecipeCard';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription, 
+  DialogFooter 
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -72,6 +80,9 @@ export default function MealPlanPage() {
   const [discoverMeals, setDiscoverMeals] = useState<MealDBMeal[]>([]);
   const [discoverLoading, setDiscoverLoading] = useState(false);
   const [cuisineFilter, setCuisineFilter] = useState<string>('all');
+  const [isAutoFilling, setIsAutoFilling] = useState(false);
+  const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
+  const [isClearingAll, setIsClearingAll] = useState(false);
 
   // Cuisines available in TheMealDB
   const CUISINES = [
@@ -142,6 +153,7 @@ export default function MealPlanPage() {
   const handlePrevWeek = () => setCurrentDate(prev => subWeeks(prev, 1));
 
   const handleAutoFill = async () => {
+    if (isAutoFilling) return;
     if (!mealPlan || !recipes.length) {
       toast.create({
         title: "No Recipes Available",
@@ -171,27 +183,51 @@ export default function MealPlanPage() {
       }
     }
 
-    const recentRecipeIds = getRecentRecipeIds(repeatWindowDays);
-    const lockedSlots = mealPlan.meals || createEmptyWeekMeals();
-    const newPlan = generateMealPlan(recipes, recentRecipeIds, lockedSlots, repeatWindowDays, userDietaryRestrictions);
-    await saveMealPlan(newPlan);
-    
-    toast.create({
-      title: "Week Auto-Filled! 🗓️",
-      description: userDietaryRestrictions.length > 0
-        ? `7-day plan filled with variety, complying with ${userDietaryRestrictions.join(', ')}.`
-        : "Your 7-day meal plan has been generated with variety.",
-      type: "success",
-    });
+    setIsAutoFilling(true);
+    try {
+      const recentRecipeIds = getRecentRecipeIds(repeatWindowDays);
+      const lockedSlots = mealPlan.meals || createEmptyWeekMeals();
+      const newPlan = generateMealPlan(recipes, recentRecipeIds, lockedSlots, repeatWindowDays, userDietaryRestrictions);
+      await saveMealPlan(newPlan);
+      
+      toast.create({
+        title: "Week Auto-Filled! 🗓️",
+        description: userDietaryRestrictions.length > 0
+          ? `7-day plan filled with variety, complying with ${userDietaryRestrictions.join(', ')}.`
+          : "Your 7-day meal plan has been generated with variety.",
+        type: "success",
+      });
+    } catch {
+      toast.create({
+        title: "Auto-Fill Failed",
+        description: "Could not generate meal plan. Please try again.",
+        type: "error",
+      });
+    } finally {
+      setIsAutoFilling(false);
+    }
   };
 
   const handleClearAll = async () => {
-    await saveMealPlan(createEmptyWeekMeals());
-    toast.create({
-      title: "Meal Plan Cleared",
-      description: "All meal slots have been reset.",
-      type: "info",
-    });
+    if (isClearingAll) return;
+    setIsClearingAll(true);
+    try {
+      await saveMealPlan(createEmptyWeekMeals());
+      toast.create({
+        title: "Meal Plan Cleared",
+        description: "All meal slots have been reset.",
+        type: "info",
+      });
+      setIsClearDialogOpen(false);
+    } catch {
+      toast.create({
+        title: "Clear Failed",
+        description: "Could not clear meal plan. Please try again.",
+        type: "error",
+      });
+    } finally {
+      setIsClearingAll(false);
+    }
   };
 
   const handleSelectRecipe = async (recipe: Recipe) => {
@@ -291,6 +327,7 @@ export default function MealPlanPage() {
               }}
               className="opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-600 p-0.5 rounded cursor-pointer"
               title="Remove meal"
+              aria-label="Remove meal"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -344,18 +381,77 @@ export default function MealPlanPage() {
         
         <div className="flex flex-wrap items-center gap-2">
           <Link href="/shopping-list">
-            <Button variant="outline" className="w-full sm:w-auto rounded-xl border-orange-200 bg-orange-50/60 hover:bg-orange-100 text-primary font-semibold">
+            <Button variant="outline" className="w-full sm:w-auto rounded-xl border-orange-200 bg-orange-50/60 hover:bg-orange-100 text-primary font-semibold cursor-pointer">
               <ShoppingBag className="mr-2 h-4 w-4" />
               Shopping List
             </Button>
           </Link>
-          <Button variant="outline" onClick={handleClearAll} className="w-full sm:w-auto rounded-xl border-stone-300 hover:bg-red-50 hover:text-red-600 hover:border-red-200">
+          
+          <Button 
+            variant="outline" 
+            className="w-full sm:w-auto rounded-xl border-stone-300 hover:bg-red-50 hover:text-red-600 hover:border-red-200 cursor-pointer"
+            disabled={isClearingAll || isAutoFilling}
+            onClick={() => setIsClearDialogOpen(true)}
+          >
             <Trash2 className="mr-2 h-4 w-4" />
             Clear All
           </Button>
-          <Button onClick={handleAutoFill} className="w-full sm:w-auto bg-primary hover:bg-orange-700 text-primary-foreground font-semibold rounded-xl shadow-xs">
-            <Sparkles className="mr-2 h-4 w-4" />
-            Auto-Fill Week
+
+          <Dialog open={isClearDialogOpen} onOpenChange={setIsClearDialogOpen}>
+            <DialogContent className="rounded-2xl sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle className="text-stone-900 font-bold">Clear All Meals</DialogTitle>
+                <DialogDescription className="text-stone-600 text-sm">
+                  Are you sure you want to clear your meal plan for this entire week? All 21 meal slots will be reset.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter className="gap-2 sm:gap-2 mt-4">
+                <Button 
+                  variant="outline" 
+                  className="rounded-xl" 
+                  disabled={isClearingAll}
+                  onClick={() => setIsClearDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  className="rounded-xl bg-red-600 hover:bg-red-700 text-white cursor-pointer"
+                  onClick={handleClearAll}
+                  disabled={isClearingAll}
+                >
+                  {isClearingAll ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Clearing...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Yes, Clear All
+                    </>
+                  )}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <Button 
+            onClick={handleAutoFill} 
+            disabled={isAutoFilling || isClearingAll}
+            className="w-full sm:w-auto bg-primary hover:bg-orange-700 text-primary-foreground font-semibold rounded-xl shadow-xs cursor-pointer disabled:opacity-70"
+          >
+            {isAutoFilling ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Auto-Filling...
+              </>
+            ) : (
+              <>
+                <Sparkles className="mr-2 h-4 w-4" />
+                Auto-Fill Week
+              </>
+            )}
           </Button>
         </div>
       </div>
@@ -386,13 +482,13 @@ export default function MealPlanPage() {
 
       {/* Week Navigation */}
       <div className="flex items-center justify-between sm:justify-center gap-4 bg-white border border-stone-200/80 p-2.5 rounded-2xl shadow-xs">
-        <Button variant="ghost" size="icon" onClick={handlePrevWeek} className="rounded-xl hover:bg-stone-100">
+        <Button variant="ghost" size="icon" onClick={handlePrevWeek} aria-label="Previous week" className="rounded-xl hover:bg-stone-100">
           <ChevronLeft className="h-5 w-5 text-stone-700" />
         </Button>
         <div className="font-bold text-stone-900 text-base sm:text-lg min-w-[200px] text-center">
           {format(weekStart, 'MMM d')} - {format(weekEnd, 'MMM d, yyyy')}
         </div>
-        <Button variant="ghost" size="icon" onClick={handleNextWeek} className="rounded-xl hover:bg-stone-100">
+        <Button variant="ghost" size="icon" onClick={handleNextWeek} aria-label="Next week" className="rounded-xl hover:bg-stone-100">
           <ChevronRight className="h-5 w-5 text-stone-700" />
         </Button>
       </div>

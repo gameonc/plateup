@@ -11,9 +11,24 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
+    // Helper: validate user document creation (free plan only, no customer ID manipulation)
+    function isValidUserCreate() {
+      return request.resource.data.get('plan', 'free') == 'free'
+        && request.resource.data.get('stripeCustomerId', '') == '';
+    }
+
+    // Helper: validate user document update (prevent privilege escalation on plan and stripeCustomerId)
+    function isValidUserUpdate() {
+      return request.resource.data.get('plan', 'free') == resource.data.get('plan', 'free')
+        && request.resource.data.get('stripeCustomerId', '') == resource.data.get('stripeCustomerId', '');
+    }
+
     // Users can only access their own data
     match /users/{userId} {
-      allow read, write: if isOwner(userId);
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUserCreate();
+      allow update: if isOwner(userId) && isValidUserUpdate();
+      allow delete: if isOwner(userId);
       
       // Recipes subcollection
       match /recipes/{recipeId} {

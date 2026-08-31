@@ -33,56 +33,68 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
   const dietaryTags = (recipe.dietaryTags || []) as DietaryRestriction[];
 
   return (
-    <Link href={`/recipes/${recipe.id}`} className="group block h-full">
+    <Link 
+      href={`/recipes/${recipe.id}`} 
+      className="group block h-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-2xl"
+      aria-label={`View recipe: ${recipe.name}`}
+    >
       <Card className="h-full hover:shadow-lg hover:border-orange-300 transition-all duration-200 cursor-pointer overflow-hidden flex flex-col rounded-2xl border-stone-200/80 bg-white group-hover:-translate-y-1">
         <div className="aspect-video relative bg-stone-100 flex items-center justify-center overflow-hidden">
           {recipe.thumbnailUrl ? (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img
               src={recipe.thumbnailUrl}
-              alt={recipe.name}
+              alt={recipe.name || 'Recipe thumbnail'}
+              loading="lazy"
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-orange-50 to-amber-50 flex items-center justify-center">
-              <ChefHat className="w-12 h-12 text-primary/30" />
+              <ChefHat className="w-12 h-12 text-primary/30" aria-hidden="true" />
             </div>
           )}
-          <div className="absolute top-3 right-3 flex items-center gap-1.5">
+          <div className="absolute top-3 right-3 flex items-center gap-1.5" aria-label={`Source: ${recipe.source || 'manual'}`}>
             {recipe.source === 'youtube' && (
               <Badge className="bg-red-500 hover:bg-red-600 border-none shadow-xs gap-1 text-white text-xs">
-                <CirclePlay className="w-3 h-3" /> YouTube
+                <CirclePlay className="w-3 h-3" aria-hidden="true" /> YouTube
               </Badge>
             )}
             {recipe.source === 'image' && (
               <Badge className="bg-blue-500 hover:bg-blue-600 border-none shadow-xs gap-1 text-white text-xs">
-                <Camera className="w-3 h-3" /> Photo
+                <Camera className="w-3 h-3" aria-hidden="true" /> Photo
               </Badge>
             )}
             {recipe.source === 'manual' && (
               <Badge className="bg-emerald-500 hover:bg-emerald-600 border-none shadow-xs gap-1 text-white text-xs">
-                <ImageIcon className="w-3 h-3" /> Manual
+                <ImageIcon className="w-3 h-3" aria-hidden="true" /> Manual
               </Badge>
             )}
           </div>
         </div>
 
-        <CardContent className="p-5 flex-grow flex flex-col justify-between space-y-4">
+        <CardContent className="p-4 sm:p-5 flex-grow flex flex-col justify-between space-y-4">
           <div>
             <div className="flex justify-between items-start mb-2 gap-2">
-              <h3 className="font-bold text-stone-900 text-lg line-clamp-2 leading-snug group-hover:text-primary transition-colors">
+              <h3 className="font-bold text-stone-900 text-base sm:text-lg line-clamp-2 leading-snug break-words group-hover:text-primary transition-colors">
                 {recipe.name}
               </h3>
-              <div className="flex items-center gap-1 shrink-0 text-amber-500">
+              <div 
+                className="flex items-center gap-1 shrink-0 text-amber-500"
+                aria-label={recipe.rating && recipe.rating > 0 ? `Rating: ${recipe.rating} out of 5 stars` : 'Not rated yet'}
+              >
                 <Star
                   className={`w-4 h-4 ${recipe.rating && recipe.rating > 0 ? 'fill-amber-500' : 'text-stone-300'}`}
+                  aria-hidden="true"
                 />
                 <span className="text-sm font-bold text-stone-800">{recipe.rating || '—'}</span>
               </div>
             </div>
 
-            <div className="flex items-center text-xs font-medium text-stone-500 mb-2">
-              <Clock className="w-3.5 h-3.5 mr-1.5 text-primary" />
+            <div 
+              className="flex items-center text-xs font-medium text-stone-500 mb-2"
+              aria-label={`Total time: ${totalTime} minutes`}
+            >
+              <Clock className="w-3.5 h-3.5 mr-1.5 text-primary shrink-0" aria-hidden="true" />
               <span>{totalTime} min total</span>
             </div>
           </div>
@@ -90,7 +102,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
           <div className="space-y-2 pt-2 border-t border-stone-100">
             {/* Dietary Tags Badges */}
             {dietaryTags && dietaryTags.length > 0 && (
-              <div className="flex flex-wrap gap-1">
+              <div className="flex flex-wrap gap-1" aria-label="Dietary tags">
                 {dietaryTags.map((dTag, i) => (
                   <Badge
                     key={i}
@@ -105,14 +117,14 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
 
             {/* General Tags */}
             {recipe.tags && recipe.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1">
+              <div className="flex flex-wrap gap-1" aria-label="Tags">
                 {recipe.tags.slice(0, 3).map((tag, i) => (
                   <Badge key={i} variant="secondary" className="text-xs font-normal bg-stone-100 text-stone-700">
                     {tag}
                   </Badge>
                 ))}
                 {recipe.tags.length > 3 && (
-                  <Badge variant="outline" className="text-xs font-normal text-stone-500">
+                  <Badge variant="outline" className="text-xs font-normal text-stone-500" aria-label={`${recipe.tags.length - 3} more tags`}>
                     +{recipe.tags.length - 3}
                   </Badge>
                 )}

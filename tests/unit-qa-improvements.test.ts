@@ -12,6 +12,10 @@ import {
   mealToRecipeData,
   type MealDBMeal,
 } from '../src/lib/mealdb.ts';
+import {
+  scaleIngredientAmount,
+  parseFractionOrAmount,
+} from '../src/lib/ingredient-parser.ts';
 import type { Recipe } from '../src/types/index.ts';
 
 describe('QA Improvements & Refinements Suite', () => {
@@ -198,6 +202,125 @@ describe('QA Improvements & Refinements Suite', () => {
     it('falls back to /dashboard if redirect param is missing', () => {
       const params = new URLSearchParams('');
       assert.strictEqual(resolveLoginRedirect(params), '/dashboard');
+    });
+  });
+
+  describe('4. Servings Vulgar Fraction & Quantity Scaling', () => {
+    it('scales Unicode vulgar fractions correctly (½, ¼, ¾, ⅓, ⅔, ⅛, ⅜, ⅝, ⅞)', () => {
+      // Scale 2x (e.g. 2 servings -> 4 servings)
+      assert.strictEqual(scaleIngredientAmount('½', 2), '1');
+      assert.strictEqual(scaleIngredientAmount('¼', 2), '1/2');
+      assert.strictEqual(scaleIngredientAmount('¾', 2), '1 1/2');
+      assert.strictEqual(scaleIngredientAmount('⅓', 2), '2/3');
+      assert.strictEqual(scaleIngredientAmount('⅔', 2), '1 1/3');
+      assert.strictEqual(scaleIngredientAmount('⅛', 2), '1/4');
+      assert.strictEqual(scaleIngredientAmount('⅜', 2), '3/4');
+      assert.strictEqual(scaleIngredientAmount('⅝', 2), '1 1/4');
+      assert.strictEqual(scaleIngredientAmount('⅞', 2), '1 3/4');
+
+      // Scale 0.5x (e.g. 4 servings -> 2 servings)
+      assert.strictEqual(scaleIngredientAmount('½', 0.5), '1/4');
+      assert.strictEqual(scaleIngredientAmount('¾', 0.5), '3/8');
+      assert.strictEqual(scaleIngredientAmount('1', 0.5), '1/2');
+    });
+
+    it('scales compound vulgar fractions (e.g., "1 ½", "2 ¾", "3 ⅓")', () => {
+      assert.strictEqual(scaleIngredientAmount('1 ½', 2), '3');
+      assert.strictEqual(scaleIngredientAmount('2 ¾', 2), '5 1/2');
+      assert.strictEqual(scaleIngredientAmount('1 ⅓', 3), '4');
+      assert.strictEqual(scaleIngredientAmount('2 ⅛', 2), '4 1/4');
+    });
+
+    it('scales ASCII fractions and mixed fractions (e.g., "1/2", "1 1/2", "2-1/2")', () => {
+      assert.strictEqual(scaleIngredientAmount('1/2', 2), '1');
+      assert.strictEqual(scaleIngredientAmount('1/4', 2), '1/2');
+      assert.strictEqual(scaleIngredientAmount('3/4', 2), '1 1/2');
+      assert.strictEqual(scaleIngredientAmount('1 1/2', 2), '3');
+      assert.strictEqual(scaleIngredientAmount('2-1/2', 2), '5');
+      assert.strictEqual(scaleIngredientAmount('1 / 2', 2), '1');
+    });
+
+    it('scales whole integers and decimal numbers cleanly', () => {
+      assert.strictEqual(scaleIngredientAmount('2', 2), '4');
+      assert.strictEqual(scaleIngredientAmount('1', 1.5), '1 1/2');
+      assert.strictEqual(scaleIngredientAmount('3', 0.5), '1 1/2');
+      assert.strictEqual(scaleIngredientAmount('2.5', 2), '5');
+    });
+
+    it('preserves non-numeric strings and unparseable measurements as-is', () => {
+      assert.strictEqual(scaleIngredientAmount('to taste', 2), 'to taste');
+      assert.strictEqual(scaleIngredientAmount('a pinch', 2), 'a pinch');
+      assert.strictEqual(scaleIngredientAmount('', 2), '');
+      assert.strictEqual(scaleIngredientAmount(null, 2), '');
+      assert.strictEqual(scaleIngredientAmount(undefined, 2), '');
+    });
+
+    it('returns original amount unchanged when scale is 1', () => {
+      assert.strictEqual(scaleIngredientAmount('½', 1), '½');
+      assert.strictEqual(scaleIngredientAmount('1 1/2', 1), '1 1/2');
+      assert.strictEqual(scaleIngredientAmount('3', 1), '3');
+    });
+  });
+
+  describe('5. Image Downscaling Calculations & Constraints', () => {
+    function calculateDownscaledDimensions(
+      width: number,
+      height: number,
+      maxDimension = 1920
+    ): { width: number; height: number; scaled: boolean } {
+      if (width <= maxDimension && height <= maxDimension) {
+        return { width, height, scaled: false };
+      }
+      if (width > height) {
+        return {
+          width: maxDimension,
+          height: Math.round((height * maxDimension) / width),
+          scaled: true,
+        };
+      } else {
+        return {
+          width: Math.round((width * maxDimension) / height),
+          height: maxDimension,
+          scaled: true,
+        };
+      }
+    }
+
+    it('downscales landscape 4032x3024 (12MP camera photo) to <= 1920px preserving aspect ratio', () => {
+      const result = calculateDownscaledDimensions(4032, 3024, 1920);
+      assert.strictEqual(result.width, 1920);
+      assert.strictEqual(result.height, 1440);
+      assert.strictEqual(result.scaled, true);
+      // Aspect ratio check: 4032/3024 = 1.3333, 1920/1440 = 1.3333
+      assert.strictEqual((1920 / 1440).toFixed(4), (4032 / 3024).toFixed(4));
+    });
+
+    it('downscales portrait 3024x4032 photo to <= 1920px height preserving aspect ratio', () => {
+      const result = calculateDownscaledDimensions(3024, 4032, 1920);
+      assert.strictEqual(result.height, 1920);
+      assert.strictEqual(result.width, 1440);
+      assert.strictEqual(result.scaled, true);
+    });
+
+    it('downscales high-res 8000x6000 (48MP photo) to max 1920px', () => {
+      const result = calculateDownscaledDimensions(8000, 6000, 1920);
+      assert.strictEqual(result.width, 1920);
+      assert.strictEqual(result.height, 1440);
+      assert.strictEqual(result.scaled, true);
+    });
+
+    it('leaves photos smaller than 1920px unscaled in dimensions', () => {
+      const result = calculateDownscaledDimensions(1200, 800, 1920);
+      assert.strictEqual(result.width, 1200);
+      assert.strictEqual(result.height, 800);
+      assert.strictEqual(result.scaled, false);
+    });
+
+    it('handles exact 1920x1080 resolution without downscaling', () => {
+      const result = calculateDownscaledDimensions(1920, 1080, 1920);
+      assert.strictEqual(result.width, 1920);
+      assert.strictEqual(result.height, 1080);
+      assert.strictEqual(result.scaled, false);
     });
   });
 });

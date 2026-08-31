@@ -7,9 +7,10 @@
  * Works seamlessly in production with STRIPE_SECRET_KEY or in test/dev simulation mode.
  */
 
+import crypto from 'crypto';
 import { doc, updateDoc, serverTimestamp, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from './firebase.ts';
-import type { SubscriptionPlan, UserProfile } from '../types/index.ts';
+import type { SubscriptionPlan } from '../types/index.ts';
 
 export const PRO_MONTHLY_PRICE_USD = 4.99;
 export const PRO_PRICE_CENTS = 499;
@@ -74,7 +75,7 @@ function isOfflineOrTestEnv(): boolean {
 /**
  * Safely updates Firestore user document with a timeout to avoid hanging in offline unit tests.
  */
-async function safeUpdateUserDoc(userId: string, data: Record<string, any>): Promise<void> {
+async function safeUpdateUserDoc(userId: string, data: Record<string, unknown>): Promise<void> {
   if (!userId) return;
   if (isOfflineOrTestEnv()) {
     // In unit test or mock environment without live Firestore backend, bypass gRPC streams
@@ -327,3 +328,84 @@ export async function handleStripeWebhookEvent(
       return { handled: false, action: 'unhandled_event_type' };
   }
 }
+
+/**
+ * Verifies a Stripe Webhook signature against the configured STRIPE_WEBHOOK_SECRET.
+ * In development or test mode (or when no secret is configured), it parses and returns the payload.
+ * In production mode with STRIPE_WEBHOOK_SECRET set, it verifies HMAC-SHA256 timestamp and signature.
+ */
+export function verifyStripeWebhookSignature(
+  rawBody: string,
+  signatureHeader?: string | null,
+  webhookSecret?: string
+): StripeWebhookPayload {
+  const secret = webhookSecret || process.env.STRIPE_WEBHOOK_SECRET;
+
+  // In test/dev simulation mode without live webhook secret configured, parse directly
+  if (
+    process.env.STRIPE_SIMULATION_MODE === 'true' ||
+    !secret ||
+    secret.startsWith('whsec_mock') ||
+    secret.includes('placeholder')
+  ) {
+    try {
+      const payload = JSON.parse(rawBody) as StripeWebhookPayload;
+      return payload;
+    } catch {
+      throw new Error('Invalid JSON payload');
+    }
+  }
+
+  if (!signatureHeader) {
+    throw new Error('Missing stripe-signature header');
+  }
+
+  // Parse signature header elements: t=1492774577,v1=5257a869...
+  const parts = signatureHeader.split(',');
+  let timestamp: string | null = null;
+  const signatures: string[] = [];
+
+  for (const part of parts) {
+    const [key, value] = part.trim().split('=');
+    if (key === 't') {
+      timestamp = value;
+    } else if (key === 'v1') {
+      signatures.push(value);
+    }
+  }
+
+  if (!timestamp || signatures.length === 0) {
+    throw new Error('Invalid stripe-signature header format');
+  }
+
+  // Verify timestamp within 300 seconds (5 min) tolerance window
+  const now = Math.floor(Date.now() / 1000);
+  const eventTime = parseInt(timestamp, 10);
+  if (isNaN(eventTime) || Math.abs(now - eventTime) > 300) {
+    throw new Error('Stripe webhook signature timestamp expired or invalid');
+  }
+
+  const signedPayload = `${timestamp}.${rawBody}`;
+  const hmac = crypto.createHmac('sha256', secret);
+  hmac.update(signedPayload, 'utf8');
+  const expectedSignature = hmac.digest('hex');
+
+  const expectedBuffer = Buffer.from(expectedSignature, 'utf8');
+  const isValid = signatures.some((sig) => {
+    const sigBuffer = Buffer.from(sig, 'utf8');
+    if (sigBuffer.length !== expectedBuffer.length) return false;
+    return crypto.timingSafeEqual(sigBuffer, expectedBuffer);
+  });
+
+  if (!isValid) {
+    throw new Error('Stripe webhook signature verification failed');
+  }
+
+  try {
+    const payload = JSON.parse(rawBody) as StripeWebhookPayload;
+    return payload;
+  } catch {
+    throw new Error('Invalid JSON payload');
+  }
+}
+

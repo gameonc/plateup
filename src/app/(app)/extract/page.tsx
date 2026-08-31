@@ -25,6 +25,78 @@ import {
 
 const YOUTUBE_REGEX = /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([-\w]{11})/;
 
+/**
+ * Downscales an image File client-side to a max dimension (default 1920px)
+ * and compresses to JPEG with quality 0.85 via HTMLCanvasElement.
+ * Returns base64 data URL and normalized MIME type to prevent >4.5MB payload errors on huge photos.
+ */
+async function downscaleImageFile(
+  file: File,
+  maxDimension: number = 1920,
+  quality: number = 0.85
+): Promise<{ dataUrl: string; mimeType: string }> {
+  return new Promise((resolve, reject) => {
+    if (!file.type.startsWith('image/')) {
+      reject(new Error('Invalid file type. Please provide an image (JPEG, PNG, WebP, HEIC).'));
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Failed to read selected image file.'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('Failed to load image for processing.'));
+      img.onload = () => {
+        try {
+          let { width, height } = img;
+
+          // Downscale if width or height exceeds maxDimension
+          if (width > maxDimension || height > maxDimension) {
+            if (width > height) {
+              height = Math.round((height * maxDimension) / width);
+              width = maxDimension;
+            } else {
+              width = Math.round((width * maxDimension) / height);
+              height = maxDimension;
+            }
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve({
+              dataUrl: reader.result as string,
+              mimeType: file.type || 'image/jpeg',
+            });
+            return;
+          }
+
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Standardize to image/jpeg with 0.85 quality for optimal payload compression
+          const mimeType = 'image/jpeg';
+          const dataUrl = canvas.toDataURL(mimeType, quality);
+
+          resolve({ dataUrl, mimeType });
+        } catch {
+          // Graceful fallback to unscaled data URL if canvas operations encounter error
+          resolve({
+            dataUrl: reader.result as string,
+            mimeType: file.type || 'image/jpeg',
+          });
+        }
+      };
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 function ExtractRecipeContent() {
   const { addRecipe } = useRecipes();
   const { plan, remaining, isLimitReached, recordUsage } = useUsage();
@@ -45,6 +117,7 @@ function ExtractRecipeContent() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [isExtractingImage, setIsExtractingImage] = useState(false);
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -114,19 +187,28 @@ function ExtractRecipeContent() {
     }
   };
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setImageFile(file);
     setImageError(null);
+    setIsProcessingImage(true);
 
-    // Create preview
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setSelectedImage(reader.result as string);
-    };
-    reader.readAsDataURL(file);
+    try {
+      const { dataUrl } = await downscaleImageFile(file, 1920, 0.85);
+      setSelectedImage(dataUrl);
+    } catch (error) {
+      console.error("Image processing error:", error);
+      setImageError(error instanceof Error ? error.message : 'Failed to process selected image');
+      setSelectedImage(null);
+      setImageFile(null);
+    } finally {
+      setIsProcessingImage(false);
+      if (e.target) {
+        e.target.value = '';
+      }
+    }
   };
 
   const handleExtractImage = async () => {
@@ -150,7 +232,8 @@ function ExtractRecipeContent() {
     try {
       // Extract base64 data (remove data:image/...;base64, prefix)
       const base64Data = selectedImage.split(',')[1];
-      const mimeType = imageFile.type;
+      const mimeMatch = selectedImage.match(/^data:([^;]+);base64,/);
+      const mimeType = mimeMatch ? mimeMatch[1] : (imageFile.type || 'image/jpeg');
 
       if (selectedImage) {
         setThumbnailUrl(selectedImage);
@@ -359,9 +442,13 @@ function ExtractRecipeContent() {
             <TabsContent value="photo" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
               <Card className="border-slate-200 shadow-sm">
                 <CardContent className="pt-6">
-                  <div className="flex flex-col gap-6">
-                    
-                    {!selectedImage ? (
+                    {isProcessingImage ? (
+                      <div className="flex flex-col items-center justify-center py-12 text-center bg-slate-50 rounded-xl border border-slate-200">
+                        <Loader2 className="h-8 w-8 animate-spin text-orange-600 mb-3" />
+                        <h4 className="text-sm font-semibold text-slate-800">Optimizing photo for extraction...</h4>
+                        <p className="text-xs text-slate-500 mt-1">Scaling photo down to prevent upload size limits</p>
+                      </div>
+                    ) : !selectedImage ? (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {/* Upload Area */}
                         <div 
@@ -468,7 +555,6 @@ function ExtractRecipeContent() {
                       </div>
                     )}
 
-                  </div>
                 </CardContent>
               </Card>
             </TabsContent>

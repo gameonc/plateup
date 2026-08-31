@@ -38,7 +38,7 @@ export function parseFractionOrAmount(input: string | number | null | undefined)
   if (trimmed === '0') return 0;
 
   // Mixed fraction e.g. "1 1/2" or "1-1/2" or "2 3/4"
-  const mixedMatch = trimmed.match(/^(\d+)\s*[- ]\s*(\d+)\/(\d+)$/);
+  const mixedMatch = trimmed.match(/^(\d+)\s*[- ]\s*(\d+)\s*\/\s*(\d+)$/);
   if (mixedMatch) {
     const whole = parseFloat(mixedMatch[1]);
     const num = parseFloat(mixedMatch[2]);
@@ -66,7 +66,7 @@ export function parseFractionOrAmount(input: string | number | null | undefined)
   }
 
   // Simple fraction e.g. "1/2", "3/4", "1/16", "5/8"
-  const fractionMatch = trimmed.match(/^(\d+)\/(\d+)$/);
+  const fractionMatch = trimmed.match(/^(\d+)\s*\/\s*(\d+)$/);
   if (fractionMatch) {
     const num = parseFloat(fractionMatch[1]);
     const den = parseFloat(fractionMatch[2]);
@@ -76,6 +76,20 @@ export function parseFractionOrAmount(input: string | number | null | undefined)
   // Decimal or integer string e.g. "2", "1.5", "0.25"
   const parsed = parseFloat(trimmed);
   return isNaN(parsed) ? 1 : parsed;
+}
+
+/**
+ * Scales an ingredient amount string by a multiplier (e.g., "2" * 2 → "4", "½" * 2 → "1", "1 1/2" * 2 → "3")
+ * Handles Unicode vulgar fractions, standard fractions, mixed fractions, decimals, and preserves unparseable strings.
+ */
+export function scaleIngredientAmount(amount: string | null | undefined, scale: number): string {
+  if (!amount || typeof amount !== 'string') return amount ? String(amount) : '';
+  if (scale === 1 || !amount.trim()) return amount;
+  if (!/\d|[½⅓⅔¼¾⅛⅜⅝⅞⅙⅚⅑⅒]/.test(amount)) return amount;
+
+  const num = parseFractionOrAmount(amount);
+  const scaled = num * scale;
+  return formatQuantityDisplay(scaled);
 }
 
 /**

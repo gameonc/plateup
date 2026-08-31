@@ -181,7 +181,7 @@ describe('Adversarial Monetization Stress Testing Suite', () => {
           { item: '2 lbs chicken breasts', amount: '2', unit: 'lbs' },
           { name: '1 cup jasmine rice' },
           { item: '', name: '' },
-          { otherField: 'invalid' } as any,
+          { otherField: 'invalid' } as unknown as { item?: string; name?: string },
           '1 tbsp olive oil',
         ];
 
@@ -505,7 +505,7 @@ describe('Adversarial Monetization Stress Testing Suite', () => {
         }, /Invalid or expired Stripe session ID/);
 
         await assert.rejects(async () => {
-          await verifyCheckoutSession(null as any);
+          await verifyCheckoutSession(null as unknown as string);
         }, /Invalid or expired Stripe session ID/);
       });
 
@@ -621,8 +621,8 @@ describe('Adversarial Monetization Stress Testing Suite', () => {
 
     describe('3.4: Simulated Route Handler Invariant Checks', () => {
       // Simulates /api/stripe/checkout route request validation logic
-      const simulateCheckoutRoute = async (body: any) => {
-        const { userId, userEmail, returnUrl } = body || {};
+      const simulateCheckoutRoute = async (body: Record<string, unknown> | null | undefined) => {
+        const { userId, userEmail, returnUrl } = (body || {}) as { userId?: unknown; userEmail?: unknown; returnUrl?: unknown };
         if (!userId || typeof userId !== 'string' || !userId.trim()) {
           return { status: 400, error: 'Missing required field: userId' };
         }
@@ -646,8 +646,8 @@ describe('Adversarial Monetization Stress Testing Suite', () => {
       });
 
       // Simulates /api/stripe/verify-session route request validation logic
-      const simulateVerifyRoute = async (body: any) => {
-        const { sessionId, userId } = body || {};
+      const simulateVerifyRoute = async (body: Record<string, unknown> | null | undefined) => {
+        const { sessionId, userId } = (body || {}) as { sessionId?: unknown; userId?: unknown };
         if (!sessionId || typeof sessionId !== 'string' || !sessionId.trim()) {
           return { status: 400, error: 'Missing required field: sessionId' };
         }

@@ -49,6 +49,7 @@ const TEST_FILES = [
   path.join(__dirname, 'unit-shopping-m3.test.ts'),
   path.join(__dirname, 'unit-dietary-m4.test.ts'),
   path.join(__dirname, 'unit-navigation-badges-m4.test.ts'),
+  path.join(__dirname, 'unit-accessibility-mobile-m4.test.ts'),
   path.join(__dirname, 'unit-qa-improvements.test.ts'),
 
   // Tier 5: Adversarial & Hardening Suites
@@ -59,6 +60,7 @@ const TEST_FILES = [
   path.join(__dirname, 'adversarial-empirical-verification.test.ts'),
   path.join(__dirname, 'adversarial-monetization-stress.test.ts'),
   path.join(__dirname, 'adversarial-monetization-lifecycle.test.ts'),
+  path.join(__dirname, 'adversarial-security-monetization-c2.test.ts'),
 ];
 
 async function main() {

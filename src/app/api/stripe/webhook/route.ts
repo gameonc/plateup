@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { handleStripeWebhookEvent, type StripeWebhookPayload } from '@/lib/stripe';
+import { handleStripeWebhookEvent, verifyStripeWebhookSignature, type StripeWebhookPayload } from '@/lib/stripe';
 
 export async function POST(req: NextRequest) {
   try {
-    let payload: StripeWebhookPayload;
     const rawBody = await req.text();
+    const signature = req.headers.get('stripe-signature');
 
+    let payload: StripeWebhookPayload;
     try {
-      payload = JSON.parse(rawBody);
-    } catch {
+      payload = verifyStripeWebhookSignature(rawBody, signature);
+    } catch (sigErr) {
       return NextResponse.json(
-        { error: 'Invalid JSON payload' },
+        { error: sigErr instanceof Error ? sigErr.message : 'Invalid webhook signature or payload' },
         { status: 400 }
       );
     }

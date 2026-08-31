@@ -3,21 +3,30 @@ import Link from 'next/link';
 
 export function Footer() {
   return (
-    <footer className="border-t border-stone-200 bg-white/60 mt-auto">
-      <div className="mx-auto max-w-5xl px-4 py-8 text-xs leading-relaxed text-stone-500">
+    <footer className="border-t border-stone-200 bg-white/60 mt-auto" role="contentinfo" aria-label="Site Footer">
+      <div className="mx-auto max-w-5xl px-4 pt-8 pb-24 md:pb-8 text-xs leading-relaxed text-stone-500">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           <span className="font-semibold text-stone-700">PlateUp</span>
-          <Link href="/terms" className="hover:text-stone-800 hover:underline">
+          <Link 
+            href="/terms" 
+            className="hover:text-stone-800 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-xs"
+            aria-label="Terms of Service"
+          >
             Terms of Service
           </Link>
-          <Link href="/privacy" className="hover:text-stone-800 hover:underline">
+          <Link 
+            href="/privacy" 
+            className="hover:text-stone-800 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-xs"
+            aria-label="Privacy Policy"
+          >
             Privacy Policy
           </Link>
           <a
             href="https://www.youtube.com/t/terms"
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:text-stone-800 hover:underline"
+            className="hover:text-stone-800 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-xs"
+            aria-label="YouTube Terms of Service (opens in a new tab)"
           >
             YouTube Terms of Service
           </a>
@@ -25,7 +34,8 @@ export function Footer() {
             href="https://policies.google.com/privacy"
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:text-stone-800 hover:underline"
+            className="hover:text-stone-800 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-xs"
+            aria-label="Google Privacy Policy (opens in a new tab)"
           >
             Google Privacy Policy
           </a>
@@ -45,9 +55,9 @@ export function Footer() {
           made through links on this site at no additional cost to you.
         </p>
 
-        <p className="mt-3 flex items-center gap-2">
+        <p className="mt-3 flex items-center gap-2 flex-wrap">
           <span>Uses YouTube API Services.</span>
-          <span className="text-stone-400">•</span>
+          <span className="text-stone-400" aria-hidden="true">•</span>
           <span>© {new Date().getFullYear()} <span className="font-semibold text-stone-700">CLD Technology</span></span>
         </p>
       </div>

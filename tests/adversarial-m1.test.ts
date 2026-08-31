@@ -92,6 +92,41 @@ describe('Adversarial Challenge 1: Firestore Security Rules & Path Matching', ()
     // Case 4: Root collections -> Denied
     assert.strictEqual(evaluateRule({ auth: { uid: 'u123' }, path: '/databases/(default)/documents/public_recipes/r1' }), false);
   });
+
+  it('ADV-RULES.10: Validates privilege escalation prevention on plan and stripeCustomerId', () => {
+    assert.ok(rulesContent.includes('function isValidUserCreate()'));
+    assert.ok(rulesContent.includes('function isValidUserUpdate()'));
+    assert.ok(rulesContent.includes("request.resource.data.get('plan', 'free') == 'free'"));
+    assert.ok(rulesContent.includes("request.resource.data.get('plan', 'free') == resource.data.get('plan', 'free')"));
+    assert.ok(rulesContent.includes("request.resource.data.get('stripeCustomerId', '') == resource.data.get('stripeCustomerId', '')"));
+
+    // Simulate rule logic
+    const evalUserCreate = (reqData: Record<string, string | undefined>) => {
+      const plan = reqData.plan || 'free';
+      const stripeId = reqData.stripeCustomerId || '';
+      return plan === 'free' && stripeId === '';
+    };
+
+    const evalUserUpdate = (reqData: Record<string, string | undefined>, resData: Record<string, string | undefined>) => {
+      const newPlan = reqData.plan || 'free';
+      const oldPlan = resData.plan || 'free';
+      const newStripeId = reqData.stripeCustomerId || '';
+      const oldStripeId = resData.stripeCustomerId || '';
+      return newPlan === oldPlan && newStripeId === oldStripeId;
+    };
+
+    // Create tests
+    assert.strictEqual(evalUserCreate({ plan: 'free' }), true, 'Free plan creation allowed');
+    assert.strictEqual(evalUserCreate({}), true, 'Default plan creation allowed');
+    assert.strictEqual(evalUserCreate({ plan: 'pro' }), false, 'Pro plan self-creation denied');
+    assert.strictEqual(evalUserCreate({ plan: 'free', stripeCustomerId: 'cus_fake' }), false, 'Setting stripeCustomerId on create denied');
+
+    // Update tests
+    assert.strictEqual(evalUserUpdate({ plan: 'free' }, { plan: 'free' }), true, 'Unchanged free plan update allowed');
+    assert.strictEqual(evalUserUpdate({ plan: 'pro' }, { plan: 'pro' }), true, 'Unchanged pro plan update allowed');
+    assert.strictEqual(evalUserUpdate({ plan: 'pro' }, { plan: 'free' }), false, 'Client upgrade free -> pro denied');
+    assert.strictEqual(evalUserUpdate({ plan: 'free', stripeCustomerId: 'cus_hacked' }, { plan: 'free', stripeCustomerId: 'cus_legit' }), false, 'Modifying stripeCustomerId denied');
+  });
 });
 
 describe('Adversarial Challenge 2: Offline Build Reproducibility & Font CDN Safety', () => {

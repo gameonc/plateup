@@ -11,6 +11,7 @@ import { useRecipes } from "@/hooks/useRecipes";
 import { useShoppingList } from "@/hooks/useShoppingList";
 import { OrderIngredientsButton } from "@/components/shopping/OrderIngredientsButton";
 import { AFFILIATE_DISCLOSURE_TEXT } from "@/lib/affiliate";
+import { scaleIngredientAmount } from "@/lib/ingredient-parser";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,32 +49,9 @@ export default function RecipeDetailPage() {
   const currentServings = adjustedServings ?? originalServings;
   const scale = currentServings / originalServings;
 
-  // Scale an ingredient amount string (e.g., "2" → "4", "1/2" → "1")
-  const scaleAmount = (amount: string): string => {
-    if (scale === 1 || !amount) return amount;
-    // Handle fractions like "1/2", "3/4"
-    const fractionMatch = amount.match(/^(\d+)\/(\d+)$/);
-    if (fractionMatch) {
-      const num = (parseInt(fractionMatch[1]) / parseInt(fractionMatch[2])) * scale;
-      if (num % 1 === 0) return num.toString();
-      // Convert back to nice fraction if possible
-      return num.toFixed(1).replace(/\.0$/, '');
-    }
-    // Handle mixed numbers like "1 1/2"
-    const mixedMatch = amount.match(/^(\d+)\s+(\d+)\/(\d+)$/);
-    if (mixedMatch) {
-      const num = (parseInt(mixedMatch[1]) + parseInt(mixedMatch[2]) / parseInt(mixedMatch[3])) * scale;
-      if (num % 1 === 0) return num.toString();
-      return num.toFixed(1).replace(/\.0$/, '');
-    }
-    // Handle plain numbers
-    const num = parseFloat(amount);
-    if (!isNaN(num)) {
-      const scaled = num * scale;
-      if (scaled % 1 === 0) return scaled.toString();
-      return scaled.toFixed(1).replace(/\.0$/, '');
-    }
-    return amount; // Can't parse — return as-is
+  // Scale an ingredient amount string (e.g., "2" → "4", "½" → "1", "1 1/2" → "3")
+  const scaleAmount = (amount: string, customScale: number = scale): string => {
+    return scaleIngredientAmount(amount, customScale);
   };
 
   const handleAddToList = async () => {

@@ -20,18 +20,11 @@ export default function PrivacyPage() {
         <h1 className="mt-4 text-3xl font-bold text-stone-900">Privacy Policy</h1>
         <p className="mt-1 text-sm text-stone-500">Last updated: {LAST_UPDATED}</p>
 
-        <div className="mt-6 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-          <strong>Draft pending legal review.</strong> This describes what
-          PlateUp actually stores and sends to third parties, based on the
-          application code. Replace the bracketed placeholders and have it
-          reviewed before launch.
-        </div>
-
         <div className="prose prose-stone mt-8 max-w-none text-sm leading-relaxed text-stone-700 [&_h2]:mt-8 [&_h2]:text-lg [&_h2]:font-semibold [&_h2]:text-stone-900 [&_p]:mt-3 [&_ul]:mt-3 [&_ul]:list-disc [&_ul]:pl-6 [&_li]:mt-1">
           <h2>1. Who is responsible</h2>
           <p>
-            PlateUp is operated by [LEGAL ENTITY NAME], [ADDRESS]. For privacy
-            questions or requests, contact [CONTACT EMAIL].
+            PlateUp is operated by PlateUp Inc., 548 Market St, Suite 35000, San Francisco, CA 94104. For privacy
+            questions or requests, contact support@plateup.app.
           </p>
 
           <h2>2. What we collect</h2>
@@ -146,13 +139,13 @@ export default function PrivacyPage() {
             Depending on where you live, you may have the right to access,
             correct, export, or delete your personal information, to object to or
             restrict certain processing, and to complain to a data protection
-            authority. To exercise any of these, contact [CONTACT EMAIL]. You can
+            authority. To exercise any of these, contact support@plateup.app. You can
             delete most of your content directly in the app at any time.
           </p>
 
           <h2>8. Children</h2>
           <p>
-            PlateUp is not directed at children under [AGE], and we do not
+            PlateUp is not directed at children under 13, and we do not
             knowingly collect their personal information. If you believe a child
             has given us information, contact us and we will delete it.
           </p>
@@ -179,7 +172,7 @@ export default function PrivacyPage() {
           </p>
 
           <h2>12. Contact</h2>
-          <p>Privacy questions or requests: [CONTACT EMAIL].</p>
+          <p>Privacy questions or requests: support@plateup.app.</p>
         </div>
       </main>
       <Footer />

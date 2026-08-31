@@ -1,103 +1,50 @@
-# Project: PlateUp Monetization Features
+# Project: PlateUp Pre-Production QA & Hardening
 
 ## Architecture
-PlateUp is a Next.js 15 recipe extraction and meal planning web application using TypeScript, Tailwind CSS v4, Base UI / shadcn components, Firebase (Auth + Firestore), and Google Generative AI (Gemini 2.5 Flash).
-
-The monetization layer adds two revenue streams:
-1. **Affiliate Shopping Integration**:
-   - URL generators for partner grocery stores (Amazon Fresh, Instacart) with clean ingredient query sanitization and affiliate referral parameters.
-   - UI CTAs on Shopping List page and Recipe Detail page with transparent affiliate disclosures.
-2. **Freemium Tier System & Stripe Subscription**:
-   - Monthly extraction quota tracking (5 free extractions/month for Free tier, unlimited for Pro tier) reset by calendar month (`YYYY-MM`).
-   - Friendly upgrade banners and disabled extraction buttons upon reaching quota; Discover page remains completely free & ungated.
-   - Stripe Checkout session creation for $4.99/mo recurring subscription, session verification, and Firestore user profile update to `plan: 'pro'`.
-   - Visual Pro badges/crowns in navbar and pricing navigation links.
+PlateUp is an AI-powered smart recipe extraction and meal planning web application.
+- **Frontend**: Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS, Lucide icons, Radix UI / shadcn/ui.
+- **Authentication & Database**: Firebase Auth (email/password & Google popup) + Cloud Firestore with real-time listeners and security rules.
+- **AI Processing**: Google Generative AI (Gemini Flash / Gemini Pro Vision) for structured recipe extraction from YouTube transcripts, video metadata, and food photos.
+- **Third-Party Integrations**: TheMealDB for recipe discovery, Stripe for Pro subscription billing ($4.99/mo) and webhooks, Amazon/Instacart affiliate link generation.
 
 ## Feature Inventory
 | # | Feature | Description | Milestone | Source |
 |---|---------|-------------|-----------|--------|
-| F-41 | Affiliate Link Generation & Sanitization | `src/lib/affiliate.ts` generating sanitized query URLs with affiliate tags for Amazon Fresh and Instacart + disclosure text | M1 | ORIGINAL_REQUEST §R1 |
-| F-42 | Shopping List & Recipe Detail Affiliate CTAs | "Order Ingredients" buttons and modal/dropdown with affiliate disclosure on Shopping List and Recipe Detail pages | M1 | ORIGINAL_REQUEST §R1 |
-| F-43 | Freemium Tier & Monthly Usage Tracking | `UserProfile` extension, `src/lib/usage.ts` tracking 5 free monthly extractions, ISO month reset (`YYYY-MM`), atomic increment | M2 | ORIGINAL_REQUEST §R2 |
-| F-44 | Extract Page Quota UI & Ungated Discover | Remaining extractions banner ("3 of 5 free extractions remaining"), friendly upgrade prompt on quota limit, unrestricted Discover page | M2 | ORIGINAL_REQUEST §R2 |
-| F-45 | Stripe Checkout & Webhook/Verification | `stripe` package integration, `/api/stripe/checkout` route ($4.99/mo), session verification & Firestore sync to `plan: 'pro'` | M3 | ORIGINAL_REQUEST §R3 |
-| F-46 | /pricing Page & Profile Subscription Card | `/pricing` page with Free vs Pro comparison table and "Go Pro" button; Profile page subscription management section | M3 | ORIGINAL_REQUEST §R3 |
-| F-47 | Navbar Pro Crown Badge & Pricing Navigation | Pro crown icon / badge next to user avatar in navbar when `plan: 'pro'`; "Pricing" link in landing page and in-app navigation | M4 | ORIGINAL_REQUEST §R4 |
-| F-48 | E2E Testing Suite & Build Health | Comprehensive 4-tier test suites (Tiers 1-4) + adversarial hardening (Tier 5), zero TypeScript errors, build pass | M-Final / E2E Track | ORIGINAL_REQUEST §Acceptance Criteria |
+| 1 | Stripe Webhook Signature Verification | Verify `stripe-signature` header via HMAC-SHA256 in `src/app/api/stripe/webhook/route.ts` | M1 | Done |
+| 2 | Firestore Security Rules Hardening | Prevent client-side escalation of `plan` and `stripeCustomerId` | M1 | Done |
+| 3 | Code Cleanliness & Dead Code Removal | Remove `src/lib/ai.ts`, duplicate `RecipeCard.tsx`, fix ESLint `any` and unused imports | M1 | Done |
+| 4 | Servings Adjuster Unicode Fractions | Support vulgar fractions (`½`, `¾`, etc.) in servings scaling | M2 | Done |
+| 5 | Large Image Upload Optimization | Client-side downscaling / canvas compression for >4.5MB photos | M2 | Done |
+| 6 | Recipe Extraction & Collection Flows | YouTube (standard + shorts), photo formats (jpg, png, heic, webp), CRUD, ratings, 'I Made This' | M2 | Done |
+| 7 | Meal Plan UX & Confirmation Guards | Add `isAutoFilling` state and confirmation dialog for Clear All | M3 | Done |
+| 8 | Legal & Navigation Polish | Replace draft placeholders in Privacy/Terms, add custom `not-found.tsx` | M3 | Done |
+| 9 | Shopping List & Affiliate Links | Meal plan aggregation, check-off persistence, Amazon/Instacart links | M3 | Done |
+| 10 | Icon Buttons Accessibility (A11y) | Add explicit `aria-label` attributes to all icon-only buttons | M4 | Done |
+| 11 | Mobile Responsiveness (375px) & Error States | Verify mobile 375px layout, zero horizontal overflow, error banners | M4 | Done |
+| 12 | 100% E2E Test Suite & Adversarial Hardening | Verify all test tiers (1-5), run test suite, ensure 0 regressions | M5 (Final) | Done |
 
 ## Milestones
 | # | Name | Scope | Dependencies | Status |
 |---|------|-------|-------------|--------|
-| M-E2E | E2E Test Suite Development | Requirement-driven test suite (Unit, Tier 1 Feature, Tier 2 Boundary, Tier 3 Interaction, Tier 4 Real-World Scenarios), update runner.ts, publish TEST_READY.md | none | DONE |
-| M1 | Affiliate Shopping Integration | `src/lib/affiliate.ts`, `src/components/shopping/OrderIngredientsButton.tsx`, Shopping List page & Recipe Detail page integration with disclosure text | none | DONE |
-| M2 | Freemium Tier & Usage Tracking | `src/types/index.ts`, `src/lib/usage.ts`, `src/hooks/useProfile.ts`, `src/hooks/useAuth.tsx`, `src/app/(app)/extract/page.tsx` quota display & upgrade prompt | none | DONE |
-| M3 | Stripe Checkout & Pricing Page | Install `stripe`, `/api/stripe/checkout`, `/api/stripe/verify-session`, `/api/stripe/webhook`, `/pricing` page, `/profile` subscription management | M2 | DONE |
-| M4 | Navigation, Badges & UI Integration | `Navbar.tsx` Pro crown/badge & pricing links, `src/app/page.tsx` landing page pricing links, upgrade prompt styling | M2, M3 | DONE |
-| M-Final | 100% E2E Pass & Coverage Hardening | Run full test suite across all tiers, fix any regressions, execute white-box adversarial coverage checks | M1, M2, M3, M4, M-E2E | DONE |
+| 1 | Backend Security & Code Hygiene | Stripe webhook signature, Firestore security rules, dead code removal, ESLint | none | DONE |
+| 2 | Extraction & Recipe Scaling Optimization | Servings vulgar fraction scaling, image upload downscaling, extraction flows | none | DONE |
+| 3 | Meal Plan, Shopping & Legal Polish | Meal plan action guards, custom 404, legal terms/privacy finalization | none | DONE |
+| 4 | Accessibility & Mobile UX Polish | Icon button aria-labels, 375px mobile responsive polish, loading/error states | none | DONE |
+| 5 | E2E Testing & Adversarial Hardening | Final verification: 2 Reviewers, 2 Challengers, Forensic Integrity Auditor | M1, M2, M3, M4 | DONE |
 
 ## Interface Contracts
+### Webhook ↔ Stripe Service
+- `src/app/api/stripe/webhook/route.ts` parses raw request text, retrieves `stripe-signature` header, invokes `verifyStripeWebhookSignature(rawBody, signature)` from `src/lib/stripe.ts`, and executes `handleStripeWebhookEvent(event)`.
 
-### Affiliate Engine ↔ UI Pages
-```typescript
-// src/lib/affiliate.ts
-export function cleanIngredientForSearch(raw: string): string;
-export function buildAmazonFreshUrl(ingredients: ({ item?: string; name?: string } | string | null | undefined)[], affiliateTag?: string): string;
-export function buildInstacartUrl(ingredients: ({ item?: string; name?: string } | string | null | undefined)[], partnerTag?: string): string;
-export const AFFILIATE_DISCLOSURE_TEXT: string;
-```
+### Servings Scaling ↔ Ingredient Parser
+- `scaleAmount(amount: string, scale: number)` in `src/app/(app)/recipes/[id]/page.tsx` uses `scaleIngredientAmount` from `src/lib/ingredient-parser.ts` to reliably parse decimal, fraction, mixed, and Unicode vulgar fraction amounts, and formats scaled numbers accurately.
 
-### Usage Engine ↔ Profile & Extract Page
-```typescript
-// src/lib/usage.ts & src/types/index.ts
-export type SubscriptionPlan = 'free' | 'pro';
-export interface UserProfile {
-  // ... existing fields
-  plan?: SubscriptionPlan;
-  extractionsThisMonth?: number;
-  extractionMonth?: string; // "YYYY-MM"
-  subscriptionId?: string;
-  subscriptionStatus?: string;
-}
-export const FREE_TIER_MONTHLY_LIMIT = 5;
-export function getCurrentMonthKey(date?: Date): string;
-export function getExtractionUsage(profile: UserProfile | null | undefined): {
-  plan: 'free' | 'pro';
-  used: number;
-  limit: number;
-  remaining: number;
-  isLimitReached: boolean;
-};
-export async function recordExtractionUsage(userId: string): Promise<{ remaining: number; plan: SubscriptionPlan }>;
-```
-
-### Stripe API ↔ Client Checkout
-```typescript
-// POST /api/stripe/checkout
-// Request: { userId: string; userEmail?: string; returnUrl?: string }
-// Response: { url: string; sessionId: string }
-
-// POST /api/stripe/verify-session
-// Request: { sessionId: string; userId: string }
-// Response: { success: boolean; plan: 'pro'; subscriptionId: string }
-```
+### Firestore Rules ↔ Client Auth
+- `firestore.rules` allows `write` to `/users/{userId}` only if `isOwner(userId)` AND `isValidUserUpdate()` / `isValidUserCreate()`, protecting `plan` and `stripeCustomerId` modification against client-side tampering.
 
 ## Code Layout
-- `src/types/index.ts`: Shared types for UserProfile, SubscriptionPlan, Affiliate interfaces.
-- `src/lib/affiliate.ts`: URL building & keyword sanitization for grocery partners.
-- `src/lib/usage.ts`: Quota calculation, calendar month reset, usage tracking.
-- `src/lib/stripe.ts`: Stripe client/server initialization.
-- `src/hooks/useProfile.ts`: Firestore user profile subscription listener & state.
-- `src/hooks/useUsage.ts`: Convenience hook for extraction usage & limits.
-- `src/components/layout/Navbar.tsx`: Pro crown badge, pricing link.
-- `src/components/shopping/OrderIngredientsButton.tsx`: Reusable affiliate shopping action & dialog.
-- `src/components/monetization/UpgradePrompt.tsx`: Friendly, encouraging upgrade prompt banner.
-- `src/components/monetization/ProBadge.tsx`: Reusable Pro crown badge.
-- `src/app/(app)/shopping-list/page.tsx`: Shopping list page with order CTA.
-- `src/app/(app)/recipes/[id]/page.tsx`: Recipe detail page with order CTA.
-- `src/app/(app)/extract/page.tsx`: Extract page with remaining quota and upgrade gating.
-- `src/app/(app)/profile/page.tsx`: Profile page with subscription management card.
-- `src/app/pricing/page.tsx`: Pricing comparison page ($0 Free vs $4.99/mo Pro).
-- `src/app/api/stripe/checkout/route.ts`: Stripe checkout session creation.
-- `src/app/api/stripe/verify-session/route.ts`: Instant session verification for Firestore sync.
-- `src/app/api/stripe/webhook/route.ts`: Stripe webhook handler.
-- `tests/`: Unit, feature, boundary, and scenario test suites executed via `tests/runner.ts`.
+- `src/app/` — Next.js 15 App Router pages and API routes
+- `src/components/` — React UI components (auth, layout, meal-plan, recipe, shopping, ui)
+- `src/hooks/` — React Firestore and state hooks (`useAuth`, `useRecipes`, `useMealPlan`, `useShoppingList`, `useProfile`)
+- `src/lib/` — Business logic, API clients (`ai-server.ts`, `stripe.ts`, `youtube.ts`, `mealdb.ts`, `meal-planner.ts`, `shopping-aggregator.ts`, `ingredient-parser.ts`, `usage.ts`, `affiliate.ts`)
+- `tests/` — Automated test suites across Tiers 1-4 and Tier 5 adversarial tests

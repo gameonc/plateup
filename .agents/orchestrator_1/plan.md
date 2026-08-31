@@ -1,26 +1,28 @@
-# Orchestration Plan: PlateUp Monetization Features
+# PlateUp Pre-Production QA Audit & Remediation Plan
 
-## Objectives
-Implement and rigorously verify two revenue streams in PlateUp:
-1. Affiliate Shopping Integration (Amazon Fresh / Instacart query links on Shopping List & Recipe Detail).
-2. Freemium Tier System & Usage Tracking (Monthly 5 free extractions tracking in Firestore, blocking & encouraging upgrade prompt, unlimited for Pro, unlimited TheMealDB).
-3. Pro Upgrade Page & Stripe Checkout (Stripe checkout session API, test mode, webhook/session completion handling, user plan update to pro, /pricing page, Profile page subscription management).
-4. Navigation & UI Integration (Pro badge/crown icon in navbar, Pricing links, friendly upgrade prompts).
-5. Build Health & E2E Testing (zero tsc errors, npm run build pass, comprehensive automated tests passing).
+## Overview
+Comprehensive QA audit and bug fixing of PlateUp (Next.js 15, TypeScript, Tailwind CSS, shadcn/ui, Firebase Auth/Firestore, Gemini API, Stripe).
 
-## Execution Strategy
-- **Phase 0: Architecture & Codebase Survey**
-  - Explorer 1: Project structure, pages (shopping list, recipe details, navbar, profile, extract, discover), UI components, styling.
-  - Explorer 2: Data layer & auth (Firebase Auth, Firestore models/collections, user profiles, current extraction logic).
-  - Explorer 3: Dependencies, environment variables, build setup, existing test setup, Stripe integration requirements.
-- **Phase 1: Scope Synthesis & Test Infrastructure Definition**
-  - Synthesize findings into `PROJECT.md` and `TEST_INFRA.md`.
-- **Phase 2: Implementation & E2E Testing Track**
-  - E2E Test Suite Orchestration (Tiers 1-4 tests).
-  - Milestone 1: Affiliate Shopping Integration.
-  - Milestone 2: Freemium Tier & Extraction Tracking.
-  - Milestone 3: Stripe Checkout, Webhooks & Pricing Page.
-  - Milestone 4: Navigation, Badges & Profile/Upgrade UI.
-- **Phase 3: Final Verification & Adversarial Hardening (Tier 5)**
-  - Validate 100% test pass, clean forensic audit, zero typescript/build errors.
-- **Phase 4: Completion & Sentinel Reporting**
+## Strategy & Topology (Project Pattern: Dual Track)
+
+### Phase 0: Survey & Discovery (3 Explorers in parallel)
+- Explorer 1 (Survey: Code Quality, Build & Security): Investigate TypeScript compilation, Next.js build, Jest/test suite, Firebase security rules, Stripe webhook signature verification, GEMINI_API_KEY exposure check, console.log usage, dead code.
+- Explorer 2 (Survey: User Journeys & Core Features): Investigate all primary user paths (Auth, YouTube/Photo Recipe Extraction, Recipe Detail/CRUD/Rating/CookCount, Discover page, Meal Plan, Shopping List, Profile/Preferences, Pricing/Stripe checkout).
+- Explorer 3 (Survey: Edge Cases, A11y, Mobile & Error Handling): Investigate empty states, input boundary conditions, YouTube/Photo error cases, rate limits / subscription tiers, servings scaling, 375px mobile responsiveness, WCAG accessibility, loading/error UI states.
+
+### Phase 1: Decomposition & Dual Track Setup
+- Synthesize all Survey findings into `PROJECT.md` at project root with complete Feature Inventory, Milestones, and Interface Contracts.
+- Launch E2E Testing Orchestrator (Opaque-box test suite: Tiers 1-4).
+- Launch Implementation Milestones through Sub-Orchestrators.
+
+### Phase 2: Implementation Milestones Execution
+- Sub-Orchestrators run the standard loop: Explorer (x3) -> Worker -> Reviewer (x2) -> Challenger (x2) -> Auditor -> Gate check.
+- Milestone 1: Code Quality, Security & Backend Integrity (Fix tsc errors, build issues, test runner, security rules, webhook verification, API error handlers).
+- Milestone 2: Extraction & Recipe Collections (Fix YouTube/Photo extraction, image handling, CRUD, ratings, 'I Made This' count).
+- Milestone 3: Meal Planning, Shopping List & Profile/Billing (Fix meal plan slots, auto-fill, shopping list generation & checking, affiliate links, dietary filters, subscription).
+- Milestone 4: Edge Cases, UI/UX, A11y & Mobile (Empty states, servings math fractions, 375px layouts, aria-labels, loading/error banners).
+
+### Phase 3: Final Verification & Hardening
+- 100% E2E test pass across Tiers 1-4.
+- Tier 5 White-box Adversarial Coverage Hardening (Challenger-driven).
+- Final Full Audit & Gate Confirmation.

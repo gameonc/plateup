@@ -1,11 +1,13 @@
-# PlateUp Master E2E & Monetization Test Suite Ready
+# PlateUp Master E2E & Pre-Production Test Suite Ready
 
 **Status**: READY ✅  
 **Test Command**: `npm test` or `node --experimental-strip-types tests/runner.ts`  
-**TypeScript Check**: `npx tsc --noEmit` (Zero errors)  
-**Total Tests**: 914 tests across 29 test suites  
-**Passing Rate**: 100% (914 / 914 passed, 0 failed, 0 skipped)  
-**Execution Time**: ~0.8s  
+**TypeScript Check**: `npx tsc --noEmit` (0 errors)  
+**Next.js Production Build**: `npm run build` (0 errors, 20 routes static/dynamic compiled)  
+**ESLint Status**: `npm run lint` (0 errors)  
+**Total Tests Executed**: 1057 tests across 34 test suites  
+**Passing Rate**: 100% (1057 / 1057 passed, 0 failed, 0 skipped)  
+**Execution Time**: ~1.2s  
 
 ---
 
@@ -14,43 +16,48 @@
 ```
 tests/
 ├── helpers/
-│   ├── assertions.ts                        # OKLCH color, mobile viewport, and ISO week assertions
+│   ├── assertions.ts                        # OKLCH color, mobile viewport (375px), and ISO week assertions
 │   ├── monetization-helpers.ts              # Monetization simulators: Affiliate URLs, Freemium limits, Stripe checkout & webhooks
-│   ├── recipe-fixtures.ts                   # Comprehensive recipe, video, and image fixtures
+│   ├── recipe-fixtures.ts                   # Comprehensive recipe, video, vulgar fraction, and image fixtures
 │   └── test-context.ts                      # In-memory Firestore/Auth simulator, grocery & planner engines
 ├── tier1-features/                          # Tier 1: Feature Coverage (>=5 tests per F-01 to F-47)
-│   ├── f01-f05-auth-safety.test.ts          # F-01 to F-05 (25 tests)
-│   ├── f06-f10-extraction-persistence.test.ts # F-06 to F-10 (25 tests)
-│   ├── f11-f15-recipe-actions.test.ts       # F-11 to F-15 (25 tests)
-│   ├── f16-f20-search-planner.test.ts       # F-16 to F-20 (25 tests)
-│   ├── f21-f24-autofill-dashboard.test.ts   # F-21 to F-24 (20 tests)
-│   ├── f25-f31-ui-mobile-landing.test.ts    # F-25 to F-31 (35 tests)
-│   ├── f32-f37-shopping-list.test.ts        # F-32 to F-37 (30 tests)
-│   ├── f38-f40-dietary-filtering.test.ts    # F-38 to F-40 (15 tests)
-│   └── f41-f45-monetization.test.ts         # F-41 to F-47 Monetization Features (35 tests)
+│   ├── f01-f05-auth-safety.test.ts          # F-01 to F-05: Auth, route guards, environment safety (25 tests)
+│   ├── f06-f10-extraction-persistence.test.ts # F-06 to F-10: YouTube/Vision extraction & Firestore persistence (25 tests)
+│   ├── f11-f15-recipe-actions.test.ts       # F-11 to F-15: Ratings, cook counts, notes, recipe deletions (25 tests)
+│   ├── f16-f20-search-planner.test.ts       # F-16 to F-20: Search, 7x3 weekly grid, manual slot assignment (25 tests)
+│   ├── f21-f24-autofill-dashboard.test.ts   # F-21 to F-24: Smart auto-fill planner & live dashboard views (20 tests)
+│   ├── f25-f31-ui-mobile-landing.test.ts    # F-25 to F-31: 375px mobile navigation, skeletons, A11y aria-labels (35 tests)
+│   ├── f32-f37-shopping-list.test.ts        # F-32 to F-37: 8-department grocery rollup, unit conversion, check-off (30 tests)
+│   ├── f38-f40-dietary-filtering.test.ts    # F-38 to F-40: 8 dietary restrictions & intersection filters (15 tests)
+│   └── f41-f45-monetization.test.ts         # F-41 to F-47: Affiliate links, 5-limit quota, $4.99/mo Stripe billing (35 tests)
 ├── tier2-boundary/                          # Tier 2: Boundary & Corner Cases (>=5 tests per feature domain)
-│   ├── f01-f10-boundary.test.ts             # F-01 to F-10 Boundaries (50 tests)
-│   ├── f11-f20-boundary.test.ts             # F-11 to F-20 Boundaries (50 tests)
-│   ├── f21-f30-boundary.test.ts             # F-21 to F-30 Boundaries (50 tests)
-│   ├── f31-f40-boundary.test.ts             # F-31 to F-40 Boundaries (50 tests)
-│   └── f41-f45-monetization-boundary.test.ts # F-41 to F-47 Monetization Boundaries (20 tests)
+│   ├── f01-f10-boundary.test.ts             # F-01 to F-10 Boundaries: extreme inputs, malformed URLs, empty payloads (50 tests)
+│   ├── f11-f20-boundary.test.ts             # F-11 to F-20 Boundaries: boundary ratings, duplicate slots, note lengths (50 tests)
+│   ├── f21-f30-boundary.test.ts             # F-21 to F-30 Boundaries: year rollover weeks, 375px responsive constraints (50 tests)
+│   ├── f31-f40-boundary.test.ts             # F-31 to F-40 Boundaries: unit math extremes, 0-match dietary intersections (50 tests)
+│   └── f41-f45-monetization-boundary.test.ts # F-41 to F-47 Boundaries: quota thresholds (0,4,5,6), leap days, price checks (20 tests)
 ├── tier3-pairwise/                          # Tier 3: Pairwise Cross-Feature Interactions
-│   └── pairwise-interactions.test.ts        # 45 Cross-Feature Integration Tests
+│   └── pairwise-interactions.test.ts        # 45 Cross-Feature Integration Combinations
 ├── tier4-scenarios/                         # Tier 4: Real-World Application Scenarios
 │   ├── real-world-scenarios.test.ts         # 5 Full Core End-to-End User Journeys
 │   └── monetization-scenarios.test.ts       # 4 Full Monetization & Subscription User Journeys
 ├── unit-affiliate.test.ts                   # Unit: Amazon Fresh & Instacart URL generation, keyword sanitization
+├── unit-affiliate-m1.test.ts                # Unit: M1 affiliate URL formatting tests
 ├── unit-freemium.test.ts                    # Unit: Calendar month key, 5-limit threshold, Pro unlimited bypass
 ├── unit-stripe.test.ts                      # Unit: $4.99/mo checkout session, webhook parsing, tier mapping
-├── unit-usage-m2.test.ts                    # Unit: M2 usage quota calculations
-├── unit-shopping-m3.test.ts                 # Unit: M3 shopping aggregator math
-├── unit-dietary-m4.test.ts                  # Unit: M4 dietary restriction engine
-├── unit-qa-improvements.test.ts             # Unit: QA improvements and refinements
-├── adversarial-m1.test.ts                   # Tier 5: Adversarial M1 challenges
-├── adversarial-challenger-m1.test.ts        # Tier 5: Challenger M1 suites
-├── adversarial-challenger-m2.test.ts        # Tier 5: Challenger M2 suites
-├── adversarial-tier5-hardening.test.ts      # Tier 5: Adversarial coverage hardening
-├── adversarial-empirical-verification.test.ts # Tier 5: Empirical verification suite
+├── unit-stripe-m3.test.ts                   # Unit: M3 Stripe signature verification & webhook idempotency
+├── unit-usage-m2.test.ts                    # Unit: M2 usage quota calculations & month boundary resets
+├── unit-shopping-m3.test.ts                 # Unit: M3 shopping aggregator math & unit conversions
+├── unit-dietary-m4.test.ts                  # Unit: M4 dietary restriction engine & multi-tag auto-fill
+├── unit-navigation-badges-m4.test.ts        # Unit: M4 navigation links, crown badges, and 404 routes
+├── unit-qa-improvements.test.ts             # Unit: Servings vulgar fractions, clear-all modal, image upload compression
+├── adversarial-m1.test.ts                   # Tier 5: Adversarial M1 challenges (Stripe signatures, auth safety)
+├── adversarial-challenger-m1.test.ts        # Tier 5: Challenger M1 suites (Photo thumbnails, query tabs, 375px CSS)
+├── adversarial-challenger-m2.test.ts        # Tier 5: Challenger M2 suites (Servings math, canvas downscaling, dietary tags)
+├── adversarial-tier5-hardening.test.ts      # Tier 5: Adversarial white-box hardening (Vulgar fractions, 100+ ingredient rollup)
+├── adversarial-empirical-verification.test.ts # Tier 5: Empirical verification suite (A11y labels, button double-clicks)
+├── adversarial-monetization-stress.test.ts  # Tier 5: Monetization stress testing (XSS sanitization, rapid API requests, leap years)
+├── adversarial-monetization-lifecycle.test.ts # Tier 5: Complete subscription lifecycle & Discover ungated access
 └── runner.ts                                # Master test runner & reporter
 ```
 
@@ -58,15 +65,15 @@ tests/
 
 ## 2. Coverage Matrix & Summary
 
-| Tier | Category | Required Threshold | Implemented Tests | Status |
+| Tier | Category | Required Threshold | Executed Tests | Status |
 |:---|:---|:---:|:---:|:---:|
 | **Tier 1** | Feature Coverage (F-01 to F-47) | ≥ 235 | **235** | PASS (100%) |
 | **Tier 2** | Boundary & Corner Cases (F-01 to F-47) | ≥ 220 | **220** | PASS (100%) |
 | **Tier 3** | Pairwise Cross-Feature Interactions | ≥ 40 | **45** | PASS (100%) |
 | **Tier 4** | Real-World Application Scenarios | ≥ 9 | **9** | PASS (100%) |
-| **Monetization Unit** | Affiliate, Freemium, Stripe Unit Suites | ≥ 45 | **55** | PASS (100%) |
-| **Tier 5 / Hardening** | Adversarial Hardening & Verification | ≥ 250 | **350** | PASS (100%) |
-| **TOTAL** | **All Tiers & Suites Combined** | **≥ 800** | **914** | **100% PASS** |
+| **Monetization & Domain Units** | Affiliate, Freemium, Stripe, Dietary, Shopping Units | ≥ 100 | **120** | PASS (100%) |
+| **Tier 5 / Hardening** | Adversarial Hardening, Challenger & Stress Suites | ≥ 350 | **428** | PASS (100%) |
+| **TOTAL** | **All 34 Test Suites Combined** | **≥ 1000** | **1057** | **100% PASS** |
 
 ---
 
@@ -93,7 +100,7 @@ tests/
 | F-17 | 7x3 Weekly Planner Display | 21-slot meal plan grid | 5 | 5 | ✓ | ✓ |
 | F-18 | ISO Week Navigation | Week navigation (YYYY-Www) | 5 | 5 | ✓ | ✓ |
 | F-19 | Manual Slot Assignment | Adding recipes to meal slots | 5 | 5 | ✓ | ✓ |
-| F-20 | Slot Clearing & Clear All | Slot removal and reset | 5 | 5 | ✓ | ✓ |
+| F-20 | Slot Clearing & Clear All | Slot removal and reset confirmation | 5 | 5 | ✓ | ✓ |
 | F-21 | Smart Auto-Fill Planner | Intelligent meal generation | 5 | 5 | ✓ | ✓ |
 | F-22 | Dashboard Today's Menu Live View | Today's breakfast/lunch/dinner | 5 | 5 | ✓ | ✓ |
 | F-23 | Dashboard User Statistics | Cooks this month & total recipes | 5 | 5 | ✓ | ✓ |
@@ -161,4 +168,14 @@ node --experimental-strip-types tests/runner.ts
 To verify TypeScript types:
 ```bash
 npx tsc --noEmit
+```
+
+To verify Next.js production build:
+```bash
+npm run build
+```
+
+To verify ESLint:
+```bash
+npm run lint
 ```

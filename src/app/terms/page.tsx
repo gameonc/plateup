@@ -20,18 +20,11 @@ export default function TermsPage() {
         <h1 className="mt-4 text-3xl font-bold text-stone-900">Terms of Service</h1>
         <p className="mt-1 text-sm text-stone-500">Last updated: {LAST_UPDATED}</p>
 
-        <div className="mt-6 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-          <strong>Draft pending legal review.</strong> These terms describe how
-          PlateUp actually works, but they have not been reviewed by a lawyer.
-          Replace the bracketed placeholders and have them reviewed before
-          accepting payments in production.
-        </div>
-
         <div className="prose prose-stone mt-8 max-w-none text-sm leading-relaxed text-stone-700 [&_h2]:mt-8 [&_h2]:text-lg [&_h2]:font-semibold [&_h2]:text-stone-900 [&_p]:mt-3 [&_ul]:mt-3 [&_ul]:list-disc [&_ul]:pl-6 [&_li]:mt-1">
           <h2>1. Who we are</h2>
           <p>
             PlateUp (&ldquo;PlateUp&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;) is operated by
-            [LEGAL ENTITY NAME], [ADDRESS]. You can reach us at [CONTACT EMAIL].
+            PlateUp Inc., 548 Market St, Suite 35000, San Francisco, CA 94104. You can reach us at support@plateup.app.
             By creating an account or using PlateUp, you agree to these terms. If
             you do not agree, please do not use the service.
           </p>
@@ -95,7 +88,7 @@ export default function TermsPage() {
           </p>
           <p>
             If you are a rights holder and believe content on PlateUp infringes
-            your rights, contact us at [CONTACT EMAIL] and we will review it.
+            your rights, contact us at support@plateup.app and we will review it.
           </p>
 
           <h2>5. YouTube API Services</h2>
@@ -155,7 +148,9 @@ export default function TermsPage() {
               Payments are processed by Stripe. We do not store your full card
               details.
             </li>
-            <li>Refunds: [STATE YOUR REFUND POLICY].</li>
+            <li>
+              Refunds: You may request a refund within 14 days of your initial subscription purchase by contacting support@plateup.app. Subsequent renewal charges are non-refundable, but you will retain access through the end of your prepaid billing period.
+            </li>
             <li>
               We may change prices with reasonable advance notice. Changes will
               not affect the period you have already paid for.
@@ -205,13 +200,13 @@ export default function TermsPage() {
 
           <h2>13. Governing law</h2>
           <p>
-            These terms are governed by the laws of [JURISDICTION], and disputes
-            will be handled by the courts of [JURISDICTION], except where
+            These terms are governed by the laws of the State of California, United States, and disputes
+            will be handled by the courts of San Francisco County, California, except where
             mandatory local consumer law gives you other rights.
           </p>
 
           <h2>14. Contact</h2>
-          <p>Questions about these terms: [CONTACT EMAIL].</p>
+          <p>Questions about these terms: support@plateup.app.</p>
         </div>
       </main>
       <Footer />

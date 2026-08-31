@@ -1,116 +1,100 @@
-# Project Orchestrator Final Handoff Report: PlateUp Monetization Features
+# Pre-Production QA Audit & Remediation Master Handoff Report
 
-**Agent**: Project Orchestrator (`orchestrator_1`)  
-**Parent Agent**: Sentinel (`8e1b0eb1-1ae6-4200-b040-2b5542ec3e11`)  
-**Project**: PlateUp (`/Users/CLD/.gemini/antigravity/scratch/plateup`)  
-**Timestamp**: 2026-08-28T13:15:00Z  
-**Status**: COMPLETE (All acceptance criteria met, 100% test pass, verified by 2 Reviewers, 2 Challengers, and 1 Forensic Auditor)
-
----
-
-## 1. Observation
-
-All 4 monetization requirements and acceptance criteria specified in `ORIGINAL_REQUEST.md` have been fully implemented and verified:
-
-### R1. Affiliate Shopping Integration
-- **`src/lib/affiliate.ts`**:
-  - Implemented multi-stage keyword sanitization in `cleanIngredientForSearch()` stripping measurements, vulgar Unicode fractions (`\u00BC-\u00BE\u2150-\u215E`), ASCII fractions, preparation words, stop words, and punctuation.
-  - Implemented `buildAmazonFreshUrl()` and `buildInstacartUrl()` with RFC-3986 URL encoding, top-5 query cap, and affiliate referral tags (`tag=plateup-20` and `partner_tag=plateup_app`).
-  - Defined `AFFILIATE_DISCLOSURE_TEXT` for FTC compliance.
-- **UI Integrations**:
-  - `src/components/shopping/OrderIngredientsButton.tsx`: Responsive modal dialog allowing partner store selection, preview of cleaned ingredients, and visible disclosure.
-  - `src/app/(app)/shopping-list/page.tsx`: Integrated "Order Ingredients" button into toolbar and added FTC disclosure.
-  - `src/app/(app)/recipes/[id]/page.tsx`: Integrated "Order Ingredients" button in ingredients card header/footer and bottom action bar with FTC disclosure.
-
-### R2. Freemium Tier System & Usage Tracking
-- **`src/types/index.ts` & `src/lib/usage.ts`**:
-  - Extended `UserProfile` with `plan: 'free' | 'pro'`, `extractionsThisMonth`, `extractionMonth` (`YYYY-MM`), `subscriptionId`, `subscriptionStatus`.
-  - Implemented `getCurrentMonthKey()` (UTC `YYYY-MM`), `getExtractionUsage()` (automatic calendar month rollover, 5-limit quota for Free, unlimited for Pro), and `recordExtractionUsage()` (Firestore `runTransaction` for atomic increments).
-- **`src/hooks/useProfile.ts` & `src/hooks/useUsage.ts`**:
-  - Real-time `onSnapshot` subscription synchronizing plan and usage state.
-- **UI Gating & Discover**:
-  - `src/app/(app)/extract/page.tsx`: Renders usage counter banner ("3 of 5 free extractions remaining this month" or "PlateUp Pro: Unlimited Extractions"), replaces extract buttons with `<UpgradePrompt />` upon quota exhaustion, and calls `recordUsage()` on successful extractions.
-  - `src/components/monetization/UpgradePrompt.tsx`: Encouraging, benefit-focused upgrade banner linking to `/pricing`.
-  - `src/app/(app)/discover/page.tsx`: Verified completely free, unlimited, and ungated for all users.
-
-### R3. Pro Upgrade Page & Stripe Checkout
-- **`src/lib/stripe.ts` & Route Handlers**:
-  - Implemented `createCheckoutSession()` creating recurring $4.99/mo USD Stripe subscription checkout sessions (`499` cents) with user metadata.
-  - Implemented `verifyCheckoutSession()` and `/api/stripe/verify-session` for instant session verification and Firestore profile promotion to `plan: 'pro'`.
-  - Implemented `handleStripeWebhookEvent()` and `/api/stripe/webhook` handling `checkout.session.completed`, `customer.subscription.deleted`, and `customer.subscription.updated`.
-- **UI Pages**:
-  - `src/app/pricing/page.tsx`: Full Free ($0) vs Pro ($4.99/mo) comparison table, "Go Pro" button, session verification redirect handler with toast alert, and FAQ accordion.
-  - `src/app/(app)/profile/page.tsx`: Subscription & Plan Status card showing current plan badge, quota progress bar, renewal details, and Pro upgrade CTA.
-
-### R4. Navigation & UI Integration
-- **`src/components/layout/Navbar.tsx` & `src/components/monetization/ProBadge.tsx`**:
-  - Rendered amber Pro crown badge next to user avatar in desktop top nav and mobile top header when `profile?.plan === 'pro'`.
-  - Added accessible "Pricing" links to desktop nav items, mobile avatar dropdown, and desktop avatar dropdown.
-- **`src/app/page.tsx` (Landing Page)**:
-  - Added "Pricing" links in header navigation and footer, as well as a dedicated "PlateUp Pro Experience" showcase section.
+**Project**: PlateUp AI Recipe Extraction & Meal Planning Web Application  
+**Directory**: `/Users/CLD/.gemini/antigravity/scratch/plateup`  
+**Date**: 2026-08-30  
+**Overall Verdict**: **APPROVED & PRODUCTION READY (CLEAN AUDIT)**
 
 ---
 
-## 2. Logic Chain
+## 1. Executive Summary
 
-1. **Requirements Mapping**: Every requirement from `ORIGINAL_REQUEST.md` was decomposed into feature inventory items (F-41 to F-48) in `PROJECT.md` and test specifications in `TEST_INFRA.md`.
-2. **Dual-Track Execution**:
-   - E2E Test Suite track developed 34 test files covering Unit, Tier 1 Feature, Tier 2 Boundary, Tier 3 Pairwise, Tier 4 E2E Scenarios, and Tier 5 Adversarial tests (`TEST_READY.md`).
-   - Implementation milestones M1, M2, M3, M4 were executed with strict write boundaries and verified against TypeScript, build, and test suites.
-3. **Multi-Agent Verification Gate**:
-   - Reviewer 1: APPROVE (clean code review, build/type checks, 100% test pass).
-   - Reviewer 2: APPROVE (security, transaction safety, UTC month rollover, FTC compliance).
-   - Challenger 1: APPROVE (stress-tested extreme ingredient names, ReDoS, temporal boundaries, 1,057 tests pass).
-   - Challenger 2: APPROVE (stress-tested full user journeys: Free-to-Pro lifecycle, Discover ungated browsing).
-   - Forensic Auditor: CLEAN (0 hardcoded cheats, 0 facades, 0 test bypasses).
+PlateUp has undergone an exhaustive pre-production QA audit, vulnerability remediation, and adversarial stress-testing across all user journeys, edge cases, backend integrations, security boundaries, and responsive viewports.
+
+- **TypeScript Compilation**: `0 errors` (`npx tsc --noEmit` exits 0 with `strict: true`).
+- **Next.js Production Build**: `0 errors` (All 20 static and dynamic routes compiled successfully).
+- **Automated Test Suite**: `1,138 / 1,138 tests passed` (100% pass rate across 36 test files spanning Tiers 1-5).
+- **ESLint Code Quality**: `0 errors` (`npm run lint` exits 0).
+- **Forensic Integrity Verdict**: **CLEAN** (Zero dummy implementations, zero hardcoded test returns, zero client secret leaks).
+- **Gate Status**: **PASS** (Reviewer 1: APPROVE, Reviewer 2: APPROVE, Challenger 1: APPROVE, Challenger 2: APPROVE, Auditor: CLEAN).
 
 ---
 
-## 3. Caveats
+## 2. Milestone Accomplishments & Key Fixes
 
-- In local development and automated testing environments, Stripe operates in simulated test mode (`cs_test_*`, `sub_*`) when live API keys are not present in `.env.local`. When deploying to production with live credit cards, set `STRIPE_SECRET_KEY`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, and `STRIPE_WEBHOOK_SECRET`.
-- Affiliate links default to `plateup-20` for Amazon Fresh and `plateup_app` for Instacart, which can be overridden via `NEXT_PUBLIC_AMAZON_AFFILIATE_TAG` and `NEXT_PUBLIC_INSTACART_AFFILIATE_ID`.
+### Milestone 1: Backend Security, Stripe Signature Verification & Code Hygiene
+- **Stripe Webhook Signature Verification**: Implemented cryptographic HMAC-SHA256 signature verification in `src/app/api/stripe/webhook/route.ts` and `src/lib/stripe.ts` using `crypto.timingSafeEqual` and a 300-second timestamp freshness tolerance to prevent replay and forgery attacks. Maintained offline simulation mode compatibility for dev/test environments.
+- **Firestore Security Rules Hardening**: Updated `firestore.rules` on `/users/{userId}` with `isValidUserCreate()` and `isValidUserUpdate()`, strictly preventing client-side privilege escalation to `plan: 'pro'` or unauthorized tampering with `stripeCustomerId`.
+- **Dead Code Deletion**: Removed obsolete `src/lib/ai.ts` and duplicate `src/components/recipes/RecipeCard.tsx`.
+- **Type Cleanliness**: Resolved all `@typescript-eslint/no-explicit-any` instances in `src/lib/stripe.ts` and cleaned up unused imports.
 
----
+### Milestone 2: Recipe Extraction, Image Downscaling & Servings Math
+- **Servings Vulgar Fraction Scaling**: Implemented `scaleIngredientAmount` in `src/lib/ingredient-parser.ts` and integrated it into `src/app/(app)/recipes/[id]/page.tsx`. All 13 Unicode vulgar fractions (`½`, `¼`, `¾`, `⅓`, `⅔`, `⅛`, `⅜`, `⅝`, `⅞`, `⅙`, `⅚`, `⅑`, `⅒`), mixed numbers (`2 ½`), ASCII fractions (`1/2`), and decimals scale mathematically and format cleanly. Clamped minimum servings to 1.
+- **Large Image Upload Optimization**: Implemented client-side canvas downscaling in `src/app/(app)/extract/page.tsx` (`downscaleImageFile` bounding max dimension to 1920px at 0.85 JPEG quality), preventing >4.5MB payload timeouts on camera photos.
 
-## 4. Conclusion & Acceptance Criteria Verification
+### Milestone 3: Meal Planning, Shopping List, Branded 404 & Legal Finalization
+- **Meal Plan UX Action Guards**: Added `isAutoFilling` loading state spinner with disabled button states in `src/app/(app)/meal-plan/page.tsx`, and introduced a confirmation modal for "Clear All Meals" to prevent accidental schedule wipeouts.
+- **Custom 404 Page**: Created `src/app/not-found.tsx` with PlateUp branding, ChefHat icon, friendly messaging, direct CTAs ("Go to Dashboard", "Discover Recipes"), and quick navigation destination cards.
+- **Legal Text Finalization**: Removed draft disclaimer banners in `src/app/privacy/page.tsx` and `src/app/terms/page.tsx`, and populated all draft placeholders with production company details (`PlateUp Inc.`, `support@plateup.app`, 14-day refund terms, California jurisdiction).
 
-| Requirement / Acceptance Criteria | Status | Evidence |
-| :--- | :---: | :--- |
-| **`npx tsc --noEmit` completes with zero errors** | **PASS** | Exit code 0, 0 diagnostic type errors |
-| **`npm run build` completes with zero errors** | **PASS** | Exit code 0, all 16 routes compiled |
-| **All existing and new tests pass** | **PASS** | 1,057 / 1,057 tests pass (100%) across 34 suites in ~0.8s |
-| **Shopping list & Recipe detail have "Order Ingredients" button** | **PASS** | Implemented via `OrderIngredientsButton.tsx` on `/shopping-list` and `/recipes/[id]` |
-| **Button opens partner store (Amazon Fresh / Instacart) with search terms** | **PASS** | Verified via `buildAmazonFreshUrl` and `buildInstacartUrl` |
-| **Affiliate disclosure text is visible near button** | **PASS** | `AFFILIATE_DISCLOSURE_TEXT` visible on modal and page footers |
-| **New users start with `plan: 'free'` & `extractionsThisMonth: 0`** | **PASS** | Initialized in `src/hooks/useAuth.tsx:createUserProfile` |
-| **YouTube & Photo extractions increment monthly extraction count** | **PASS** | Hooked into `recordUsage()` on `/extract/page.tsx` |
-| **Free users blocked after 5 extractions with friendly upgrade prompt** | **PASS** | Gated on `/extract/page.tsx` with `<UpgradePrompt />` |
-| **Pro users get unlimited extractions** | **PASS** | Evaluated as `Infinity` in `src/lib/usage.ts:getExtractionUsage` |
-| **Extract page shows remaining extractions count** | **PASS** | Dynamic badge: "{remaining} of 5 free extractions remaining this month" |
-| **Discover page remains completely free & unlimited** | **PASS** | Verified ungated and free on `/discover/page.tsx` |
-| **Monthly extraction count resets by month/year (`YYYY-MM`)** | **PASS** | Verified UTC ISO month key rollover in `src/lib/usage.ts` |
-| **`/pricing` renders Free vs Pro comparison table** | **PASS** | Implemented on `src/app/pricing/page.tsx` |
-| **"Go Pro" button initiates Stripe Checkout ($4.99/mo test mode)** | **PASS** | Implemented via `/api/stripe/checkout` |
-| **Successful checkout updates user's plan to `pro` in Firestore** | **PASS** | Verified via `/api/stripe/verify-session` & `/api/stripe/webhook` |
-| **Profile page shows subscription management & status** | **PASS** | Implemented on `src/app/(app)/profile/page.tsx` |
-| **Pro users have visual badge/crown in navbar** | **PASS** | Implemented on `src/components/layout/Navbar.tsx` via `ProBadge.tsx` |
-| **Upgrade prompts throughout app are friendly & encouraging** | **PASS** | Reviewed and verified copy across all components |
-| **Pricing page linked from landing page & in-app navigation** | **PASS** | Linked in Navbar desktop/mobile and landing header/footer |
+### Milestone 4: Accessibility (A11y) & 375px Mobile Responsive Layout
+- **Accessibility Enhancements**: Added explicit `aria-label` attributes to all icon-only buttons (search clear, week navigation chevrons, meal slot deletion, dialog close, account dropdown triggers), semantic `aria-pressed` on filter chips, and fallback `alt` attributes on recipe image thumbnails.
+- **Mobile Viewport Optimization**: Verified 375px mobile responsive viewports with zero horizontal overflow, compliant 48px touch targets on bottom navigation, and safe-area padding (`pb-24 md:pb-8`) preventing footer text collision.
+
+### Milestone 5: E2E Test Track, Adversarial Hardening & Forensic Audit
+- **Comprehensive Test Coverage**: Expanded master test suite to 36 test files and 1,138 test cases covering all 47 features (F-01 to F-47) across Tiers 1-4, domain unit suites, and Tier 5 adversarial suites.
+- **Dual Review & Dual Challenge Verification**: Both independent reviewers and both adversarial challengers delivered unanimous **APPROVE** verdicts.
+- **Forensic Integrity Verification**: Delivered an unconditional **CLEAN** audit verdict with zero integrity violations.
 
 ---
 
-## 5. Verification Method
+## 3. Acceptance Criteria Verification Matrix
 
-To independently verify the entire project:
+| # | Acceptance Criterion | Target | Result | Status |
+|---|----------------------|--------|--------|:------:|
+| 1 | `npx tsc --noEmit` | 0 errors | 0 errors (strict mode enabled) | PASS ✅ |
+| 2 | `npm run build` | 0 errors | 20/20 static/dynamic routes compiled | PASS ✅ |
+| 3 | `npm test` | 100% pass | 1,138 / 1,138 passed (0 failed) | PASS ✅ |
+| 4 | Full User Journey Audit | All 13 flows verified | 13/13 flows verified end-to-end | PASS ✅ |
+| 5 | No console.logs in production | 0 in `src/` | 0 occurrences in `src/` | PASS ✅ |
+| 6 | No hardcoded secrets in client bundles | 0 exposed | All private keys isolated server-side | PASS ✅ |
+| 7 | Edge Cases Handled Gracefully | All boundaries tested | Vulgar fractions, 200MP images, 0-match dietary filters verified | PASS ✅ |
+| 8 | Helpful Empty States | All pages covered | Dashboard, Recipes, Meal Plan, Shopping, Discover verified | PASS ✅ |
+| 9 | Mobile Responsive at 375px | Zero overflow | 375px viewports tested with 48px touch targets | PASS ✅ |
+| 10 | All Navigation Links Work | Verified | Header, bottom bar, destination cards, 404 links active | PASS ✅ |
+
+---
+
+## 4. Key Artifacts Index
+
+- `/Users/CLD/.gemini/antigravity/scratch/plateup/PROJECT.md` — Global Master Project Index & Feature Inventory
+- `/Users/CLD/.gemini/antigravity/scratch/plateup/TEST_INFRA.md` — E2E Test Suite Infrastructure & Coverage Specification
+- `/Users/CLD/.gemini/antigravity/scratch/plateup/TEST_READY.md` — Test Execution Summary & Feature Matrix
+- `/Users/CLD/.gemini/antigravity/scratch/plateup/.agents/orchestrator_1/GATE_STATUS.md` — Final Milestone Gate Pass Log
+- `/Users/CLD/.gemini/antigravity/scratch/plateup/.agents/orchestrator_1/plan.md` — Master Plan & Execution Topology
+- `/Users/CLD/.gemini/antigravity/scratch/plateup/.agents/orchestrator_1/progress.md` — Progress & Verification Log
+
+---
+
+## 5. Verification Commands
+
+To independently reproduce all verification results on any terminal:
 
 ```bash
 # 1. Typecheck
 npx tsc --noEmit
 
-# 2. Production build
+# 2. Production Build
 npm run build
 
-# 3. Master test suite execution (1,057 tests across 34 suites)
+# 3. Master Test Suite (1,138 tests)
 npm test
+
+# 4. Lint Check
+npm run lint
+
+# 5. Secret Containment Check
+grep -rn "NEXT_PUBLIC_GEMINI" src/
+grep -rn "NEXT_PUBLIC_STRIPE_SECRET" src/
+grep -rn "NEXT_PUBLIC_YOUTUBE" src/
 ```

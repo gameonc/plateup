@@ -3,12 +3,14 @@
  * Verifies src/lib/stripe.ts methods against the specification.
  */
 
+import crypto from 'node:crypto';
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import {
   createCheckoutSession,
   verifyCheckoutSession,
   handleStripeWebhookEvent,
+  verifyStripeWebhookSignature,
   PRO_MONTHLY_PRICE_USD,
   PRO_PRICE_CENTS,
   type StripeWebhookPayload,
@@ -161,6 +163,70 @@ describe('Unit: Milestone 3 Stripe Integration Module', () => {
       const result = await handleStripeWebhookEvent(event);
       assert.strictEqual(result.handled, false);
       assert.strictEqual(result.action, 'unhandled_event_type');
+    });
+  });
+
+  describe('verifyStripeWebhookSignature()', () => {
+    it('M3.12: Parses JSON payload directly in simulation mode without secret', () => {
+      const raw = JSON.stringify({ id: 'evt_sim', type: 'checkout.session.completed', data: { object: { id: 'cs_1' } } });
+      const payload = verifyStripeWebhookSignature(raw, null, undefined);
+      assert.strictEqual(payload.id, 'evt_sim');
+      assert.strictEqual(payload.type, 'checkout.session.completed');
+    });
+
+    it('M3.13: Throws error on invalid JSON payload in simulation mode', () => {
+      assert.throws(() => {
+        verifyStripeWebhookSignature('invalid json payload', null, undefined);
+      }, /Invalid JSON payload/);
+    });
+
+    it('M3.14: Verifies valid HMAC-SHA256 signature against secret', () => {
+      const secret = 'whsec_test_secret_key_12345';
+      const raw = JSON.stringify({ id: 'evt_sig_1', type: 'checkout.session.completed', data: { object: { id: 'cs_sig_1' } } });
+      const timestamp = Math.floor(Date.now() / 1000).toString();
+      const signedPayload = `${timestamp}.${raw}`;
+      const hmac = crypto.createHmac('sha256', secret);
+      hmac.update(signedPayload, 'utf8');
+      const signature = hmac.digest('hex');
+      const header = `t=${timestamp},v1=${signature}`;
+
+      const payload = verifyStripeWebhookSignature(raw, header, secret);
+      assert.strictEqual(payload.id, 'evt_sig_1');
+      assert.strictEqual(payload.data.object.id, 'cs_sig_1');
+    });
+
+    it('M3.15: Rejects missing stripe-signature header when secret is configured', () => {
+      const secret = 'whsec_live_configured';
+      const raw = JSON.stringify({ id: 'evt_1', type: 'test' });
+      assert.throws(() => {
+        verifyStripeWebhookSignature(raw, null, secret);
+      }, /Missing stripe-signature header/);
+    });
+
+    it('M3.16: Rejects invalid or expired timestamp', () => {
+      const secret = 'whsec_live_configured';
+      const raw = JSON.stringify({ id: 'evt_1', type: 'test' });
+      const oldTimestamp = (Math.floor(Date.now() / 1000) - 400).toString(); // > 300s old
+      const signedPayload = `${oldTimestamp}.${raw}`;
+      const hmac = crypto.createHmac('sha256', secret);
+      hmac.update(signedPayload, 'utf8');
+      const signature = hmac.digest('hex');
+      const header = `t=${oldTimestamp},v1=${signature}`;
+
+      assert.throws(() => {
+        verifyStripeWebhookSignature(raw, header, secret);
+      }, /Stripe webhook signature timestamp expired or invalid/);
+    });
+
+    it('M3.17: Rejects tampered payload or mismatched signature', () => {
+      const secret = 'whsec_live_configured';
+      const raw = JSON.stringify({ id: 'evt_1', type: 'test' });
+      const timestamp = Math.floor(Date.now() / 1000).toString();
+      const header = `t=${timestamp},v1=0000000000000000000000000000000000000000000000000000000000000000`;
+
+      assert.throws(() => {
+        verifyStripeWebhookSignature(raw, header, secret);
+      }, /Stripe webhook signature verification failed/);
     });
   });
 });

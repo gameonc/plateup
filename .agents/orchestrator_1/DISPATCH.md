@@ -1,14 +1,9 @@
-## 2026-08-28T12:07:46Z
-You are the Project Orchestrator for the monetization features project on the PlateUp app.
+# DISPATCH LOG
 
-Working Directory: /Users/CLD/.gemini/antigravity/scratch/plateup/.agents/orchestrator_1/
-Workspace Directory: /Users/CLD/.gemini/antigravity/scratch/plateup
-Original Request: /Users/CLD/.gemini/antigravity/scratch/plateup/ORIGINAL_REQUEST.md
-
-Your tasks:
-1. Initialize your BRIEFING.md, plan.md, and progress.md in your working directory (.agents/orchestrator_1/).
-2. Analyze the project and all requirements in ORIGINAL_REQUEST.md.
-3. Decompose the implementation into milestones (e.g., Affiliate Shopping integration R1, Freemium tier & usage tracking R2, Pro upgrade page & Stripe checkout R3, Navigation & UI integration R4, Build health & testing).
-4. Dispatch specialist subagents (e.g. teamwork_preview_swe / implementers / reviewers / testers) to implement the features according to the acceptance criteria.
-5. Continuously update your progress.md and BRIEFING.md.
-6. When all tasks are completed and verified against the acceptance criteria (zero tsc errors, build passes, all tests pass, features fully functional), report completion back to the Sentinel.
+## 2026-08-30T17:56:44Z
+Perform a comprehensive pre-production QA audit and fix all issues for PlateUp across:
+1. Full User Journey Audit
+2. Edge Cases to Test
+3. Code Quality Audit (Run `npx tsc --noEmit`, `npm run build`, `npm test`, check console.logs, security rules, Stripe webhook signature verification, GEMINI_API_KEY security, dead code, error handling)
+4. Accessibility & UX (Alt text, aria labels, color contrast, focus states, loading states, friendly error messages)
+5. Fix All Issues Found - fix every single bug and edge case issue found. Ensure 0 TypeScript errors, 0 build errors, all tests pass, and app works reliably.
