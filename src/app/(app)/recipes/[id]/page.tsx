@@ -302,6 +302,9 @@ export default function RecipeDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pt-6">
         {/* Left Column: Ingredients */}
         <div className="lg:col-span-1 space-y-6">
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800 leading-relaxed">
+            <span className="font-bold">⚠️ Allergy Notice:</span> Ingredients and dietary tags are AI-generated and may be inaccurate. If you have food allergies, always verify ingredients against the original source and product labels. You are responsible for your own food safety.
+          </div>
           <Card className="border-stone-200/80 shadow-xs bg-white rounded-2xl">
             <CardHeader className="pb-3 border-b border-stone-100 flex flex-row items-center justify-between">
               <CardTitle className="text-lg font-bold flex items-center gap-2 text-stone-900">
