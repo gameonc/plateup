@@ -4,7 +4,7 @@ import React, { useState, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useRecipes } from '@/hooks/useRecipes';
 import { useUsage } from '@/hooks/useUsage';
-import { extractRecipeFromYouTube, extractRecipeFromImage, ExtractedRecipe } from '@/lib/extract-recipe';
+import { extractRecipeFromYouTube, extractRecipeFromYouTubeUrl, extractRecipeFromImage, ExtractedRecipe } from '@/lib/extract-recipe';
 import { RecipePreview } from '@/components/recipe/RecipePreview';
 import { UpgradePrompt } from '@/components/monetization/UpgradePrompt';
 import { ProBadge } from '@/components/monetization/ProBadge';
@@ -24,6 +24,19 @@ import {
 } from 'lucide-react';
 
 const YOUTUBE_REGEX = /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([-\w]{11})/;
+const TIKTOK_REGEX = /(?:tiktok\.com\/@[\w.-]+\/video\/(\d+)|vm\.tiktok\.com\/([\w-]+)|tiktok\.com\/t\/([\w-]+))/;
+
+function isYouTubeUrl(url: string): boolean {
+  return YOUTUBE_REGEX.test(url);
+}
+
+function isTikTokUrl(url: string): boolean {
+  return TIKTOK_REGEX.test(url);
+}
+
+function isValidVideoUrl(url: string): boolean {
+  return isYouTubeUrl(url) || isTikTokUrl(url);
+}
 
 /**
  * Downscales an image File client-side to a max dimension (default 1920px)
@@ -133,14 +146,17 @@ function ExtractRecipeContent() {
     const url = e.target.value;
     setYoutubeUrl(url);
     
-    const match = url.match(YOUTUBE_REGEX);
-    if (match && match[1]) {
-      setYoutubeVideoId(match[1]);
+    const ytMatch = url.match(YOUTUBE_REGEX);
+    if (ytMatch && ytMatch[1]) {
+      setYoutubeVideoId(ytMatch[1]);
+      setYoutubeError(null);
+    } else if (isTikTokUrl(url)) {
+      setYoutubeVideoId('tiktok'); // flag to indicate valid TikTok URL
       setYoutubeError(null);
     } else {
       setYoutubeVideoId(null);
       if (url.trim() !== '') {
-        setYoutubeError("Please enter a valid YouTube URL");
+        setYoutubeError("Please enter a valid YouTube or TikTok URL");
       } else {
         setYoutubeError(null);
       }
@@ -166,20 +182,32 @@ function ExtractRecipeContent() {
     setCurrentSource('youtube');
     setIsWatchingVideo(false);
 
+    const isTikTok = isTikTokUrl(youtubeUrl);
+
     try {
-      setThumbnailUrl(`https://img.youtube.com/vi/${youtubeVideoId}/hqdefault.jpg`);
+      if (!isTikTok) {
+        setThumbnailUrl(`https://img.youtube.com/vi/${youtubeVideoId}/hqdefault.jpg`);
+      } else {
+        setThumbnailUrl(undefined); // TikTok doesn't have easy thumbnail URLs
+      }
 
-      // Reads the video description first; falls back to Gemini watching the
-      // video when the description has no usable recipe.
-      const recipe = await extractRecipeFromYouTube(youtubeUrl, () =>
-        setIsWatchingVideo(true)
-      );
-
-      await recordUsage();
-      setExtractedRecipe(recipe);
+      if (isTikTok) {
+        // TikTok goes straight to Gemini — no description path
+        setIsWatchingVideo(true);
+        const recipe = await extractRecipeFromYouTubeUrl(youtubeUrl);
+        await recordUsage();
+        setExtractedRecipe(recipe);
+      } else {
+        // YouTube: try description first, fall back to video
+        const recipe = await extractRecipeFromYouTube(youtubeUrl, () =>
+          setIsWatchingVideo(true)
+        );
+        await recordUsage();
+        setExtractedRecipe(recipe);
+      }
       
     } catch (error) {
-      console.error("YouTube extraction error:", error);
+      console.error("Extraction error:", error);
       setYoutubeError(error instanceof Error ? error.message : 'An unexpected error occurred');
     } finally {
       setIsExtractingYoutube(false);
@@ -312,7 +340,7 @@ function ExtractRecipeContent() {
           </div>
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-slate-900">Extract Recipe</h1>
-            <p className="text-sm text-slate-500 mt-0.5">Turn any YouTube cooking video or food photo into a recipe</p>
+            <p className="text-sm text-slate-500 mt-0.5">Turn any YouTube or TikTok cooking video, or food photo into a recipe</p>
           </div>
         </div>
 
@@ -343,7 +371,7 @@ function ExtractRecipeContent() {
                 className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-sm py-2.5 transition-all"
               >
                 <CirclePlay className="w-4 h-4 mr-2" />
-                YouTube Video
+                Video Link
               </TabsTrigger>
               <TabsTrigger 
                 value="photo" 
@@ -360,14 +388,14 @@ function ExtractRecipeContent() {
                   <div className="flex flex-col gap-4">
                     <div className="space-y-2">
                       <label htmlFor="youtube-url" className="text-sm font-medium text-slate-700">
-                        YouTube Cooking Video URL
+                        YouTube or TikTok Video URL
                       </label>
                       <div className="flex flex-col sm:flex-row gap-3">
                         <div className="relative flex-1">
                           <CirclePlay className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
                           <Input
                             id="youtube-url"
-                            placeholder="Paste YouTube cooking video URL..."
+                            placeholder="Paste YouTube or TikTok cooking video URL..."
                             value={youtubeUrl}
                             onChange={handleYoutubeUrlChange}
                             className="pl-9 bg-slate-50 border-slate-200 focus-visible:ring-orange-500"
