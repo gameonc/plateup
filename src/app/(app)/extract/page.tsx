@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, Suspense } from 'react';
+import React, { useState, useRef, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useRecipes } from '@/hooks/useRecipes';
 import { useUsage } from '@/hooks/useUsage';
@@ -115,16 +115,25 @@ function ExtractRecipeContent() {
   const { plan, remaining, isLimitReached, recordUsage } = useUsage();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get('tab');
+  const urlParam = searchParams.get('url');
 
   const [selectedTab, setSelectedTab] = useState<'youtube' | 'photo' | null>(null);
   const activeTab = selectedTab ?? (tabParam === 'photo' ? 'photo' : 'youtube');
 
   // YouTube State
-  const [youtubeUrl, setYoutubeUrl] = useState('');
-  const [youtubeVideoId, setYoutubeVideoId] = useState<string | null>(null);
+  const [youtubeUrl, setYoutubeUrl] = useState(urlParam || '');
+  const [youtubeVideoId, setYoutubeVideoId] = useState<string | null>(() => {
+    if (urlParam) {
+      const ytMatch = urlParam.match(YOUTUBE_REGEX);
+      if (ytMatch?.[1]) return ytMatch[1];
+      if (isTikTokUrl(urlParam)) return 'tiktok';
+    }
+    return null;
+  });
   const [isExtractingYoutube, setIsExtractingYoutube] = useState(false);
   const [youtubeError, setYoutubeError] = useState<string | null>(null);
   const [isWatchingVideo, setIsWatchingVideo] = useState(false);
+  const [autoExtractDone, setAutoExtractDone] = useState(false);
 
   // Photo State
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -141,6 +150,20 @@ function ExtractRecipeContent() {
   const [isSaved, setIsSaved] = useState(false);
   const [currentSource, setCurrentSource] = useState<'youtube' | 'image' | null>(null);
   const [thumbnailUrl, setThumbnailUrl] = useState<string | undefined>(undefined);
+
+  // Auto-extract when coming from landing page with a URL param
+  const handleExtractYoutubeRef = useRef<() => void>();
+
+  useEffect(() => {
+    if (urlParam && youtubeVideoId && !autoExtractDone && !isExtractingYoutube) {
+      setAutoExtractDone(true);
+      // Small delay to let the UI render first
+      const timer = setTimeout(() => {
+        handleExtractYoutubeRef.current?.();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [urlParam, youtubeVideoId, autoExtractDone, isExtractingYoutube]);
 
   const handleYoutubeUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const url = e.target.value;
@@ -162,7 +185,6 @@ function ExtractRecipeContent() {
       }
     }
   };
-
   const handleExtractYoutube = async () => {
     if (!youtubeUrl || !youtubeVideoId) return;
 
@@ -214,6 +236,9 @@ function ExtractRecipeContent() {
       setIsWatchingVideo(false);
     }
   };
+
+  // Keep ref in sync so auto-extract from landing page URL param works
+  handleExtractYoutubeRef.current = handleExtractYoutube;
 
   const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
