@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { addWeeks, subWeeks, startOfWeek, endOfWeek, format, getISOWeek, getYear } from 'date-fns';
-import { searchMealsByName, getRandomMeals, mealToRecipeData, type MealDBMeal } from '@/lib/mealdb';
+import { searchRecipes, getRandomRecipes, getRecipeById, getRecipesByCuisine, spoonacularToRecipeData, type SpoonacularRecipe, type SpoonacularSearchResult } from '@/lib/spoonacular';
 import { 
   Calendar, 
   ChevronLeft, 
@@ -77,14 +77,14 @@ export default function MealPlanPage() {
   const [pickerDietaryFilter, setPickerDietaryFilter] = useState<string>('all');
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [pickerTab, setPickerTab] = useState<'saved' | 'discover'>('discover');
-  const [discoverMeals, setDiscoverMeals] = useState<MealDBMeal[]>([]);
+  const [discoverMeals, setDiscoverMeals] = useState<(SpoonacularRecipe | SpoonacularSearchResult)[]>([]);
   const [discoverLoading, setDiscoverLoading] = useState(false);
   const [cuisineFilter, setCuisineFilter] = useState<string>('all');
   const [isAutoFilling, setIsAutoFilling] = useState(false);
   const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
   const [isClearingAll, setIsClearingAll] = useState(false);
 
-  // Cuisines available in TheMealDB
+  // Cuisines available in Spoonacular
   const CUISINES = [
     { id: 'all', label: '🌍 All', flag: '' },
     { id: 'American', label: '🇺🇸 American', flag: '🇺🇸' },
@@ -95,46 +95,31 @@ export default function MealPlanPage() {
     { id: 'Chinese', label: '🇨🇳 Chinese', flag: '🇨🇳' },
     { id: 'French', label: '🇫🇷 French', flag: '🇫🇷' },
     { id: 'British', label: '🇬🇧 British', flag: '🇬🇧' },
-    { id: 'Jamaican', label: '🇯🇲 Jamaican', flag: '🇯🇲' },
+    { id: 'Caribbean', label: '🇯🇲 Caribbean', flag: '🇯🇲' },
     { id: 'Thai', label: '🇹🇭 Thai', flag: '🇹🇭' },
     { id: 'Greek', label: '🇬🇷 Greek', flag: '🇬🇷' },
     { id: 'Spanish', label: '🇪🇸 Spanish', flag: '🇪🇸' },
-    { id: 'Moroccan', label: '🇲🇦 Moroccan', flag: '🇲🇦' },
-    { id: 'Russian', label: '🇷🇺 Russian', flag: '🇷🇺' },
+    { id: 'Middle Eastern', label: '🇱🇧 Middle Eastern', flag: '🇱🇧' },
+    { id: 'Korean', label: '🇰🇷 Korean', flag: '🇰🇷' },
     { id: 'Vietnamese', label: '🇻🇳 Vietnamese', flag: '🇻🇳' },
-    { id: 'Canadian', label: '🇨🇦 Canadian', flag: '🇨🇦' },
-    { id: 'Irish', label: '🇮🇪 Irish', flag: '🇮🇪' },
+    { id: 'African', label: '🌍 African', flag: '🌍' },
+    { id: 'Mediterranean', label: '🫒 Mediterranean', flag: '🫒' },
   ];
 
-  // Popular categories for the "All" default view
-  const POPULAR_CATEGORIES = ['Chicken', 'Beef', 'Pasta', 'Seafood', 'Breakfast', 'Dessert', 'Lamb', 'Pork', 'Side', 'Vegetarian'];
-
-  // Load TheMealDB suggestions — by cuisine, search, or curated categories
+  // Load Spoonacular recipes — by cuisine, search, or random popular
   const loadDiscoverMeals = useCallback(async (query?: string, cuisine?: string) => {
     setDiscoverLoading(true);
     try {
       if (query && query.trim()) {
-        const results = await searchMealsByName(query.trim());
+        const results = await searchRecipes(query.trim(), 15);
         setDiscoverMeals(results);
       } else if (cuisine && cuisine !== 'all') {
-        // Filter by cuisine/area
-        const { filterByArea, getMealById } = await import('@/lib/mealdb');
-        const meals = await filterByArea(cuisine);
-        const shuffled = meals.sort(() => Math.random() - 0.5).slice(0, 15);
-        const details = await Promise.all(shuffled.map(m => getMealById(m.idMeal)));
-        setDiscoverMeals(details.filter((m): m is MealDBMeal => m !== null));
+        const results = await getRecipesByCuisine(cuisine, 15);
+        setDiscoverMeals(results);
       } else {
-        // Default: load 2 meals from each popular category
-        const categoryPromises = POPULAR_CATEGORIES.map(async (cat) => {
-          const { filterByCategory, getMealById } = await import('@/lib/mealdb');
-          const meals = await filterByCategory(cat);
-          const shuffled = meals.sort(() => Math.random() - 0.5);
-          const picks = shuffled.slice(0, 2);
-          const details = await Promise.all(picks.map(m => getMealById(m.idMeal)));
-          return details.filter((m): m is MealDBMeal => m !== null);
-        });
-        const allMeals = (await Promise.all(categoryPromises)).flat();
-        setDiscoverMeals(allMeals.sort(() => Math.random() - 0.5));
+        // Default: load random popular recipes
+        const results = await getRandomRecipes(15);
+        setDiscoverMeals(results);
       }
     } catch {
       console.warn('Failed to load discover meals');
@@ -247,22 +232,41 @@ export default function MealPlanPage() {
   };
 
   // Handle selecting a TheMealDB meal — save it first, then assign
-  const handleSelectDiscoverMeal = async (meal: MealDBMeal) => {
+  // Handle selecting a Spoonacular recipe — fetch full details, save, then assign
+  const handleSelectDiscoverMeal = async (meal: SpoonacularRecipe | SpoonacularSearchResult) => {
     if (!activeSlot) return;
-    const recipeData = mealToRecipeData(meal);
-    const recipeId = await addRecipe(recipeData);
-    await setMealSlot(activeSlot.day, activeSlot.meal, {
-      recipeId,
-      recipeName: recipeData.name,
-      thumbnailUrl: recipeData.thumbnailUrl,
-    });
-    toast.create({
-      title: "Meal Assigned! 🍽️",
-      description: `Saved "${recipeData.name}" and added to ${formatDayName(activeSlot.day)} ${formatMealTime(activeSlot.meal)}.`,
-      type: "success",
-    });
-    setIsPickerOpen(false);
-    setActiveSlot(null);
+    try {
+      // If it's a search result (no ingredients), fetch full details
+      let fullRecipe: SpoonacularRecipe;
+      if ('extendedIngredients' in meal && meal.extendedIngredients) {
+        fullRecipe = meal as SpoonacularRecipe;
+      } else {
+        const fetched = await getRecipeById(meal.id);
+        if (!fetched) throw new Error('Failed to load recipe details');
+        fullRecipe = fetched;
+      }
+      const recipeData = spoonacularToRecipeData(fullRecipe);
+      const recipeId = await addRecipe(recipeData);
+      await setMealSlot(activeSlot.day, activeSlot.meal, {
+        recipeId,
+        recipeName: recipeData.name,
+        thumbnailUrl: recipeData.thumbnailUrl,
+      });
+      toast.create({
+        title: "Meal Assigned! 🍽️",
+        description: `Saved "${recipeData.name}" and added to ${formatDayName(activeSlot.day)} ${formatMealTime(activeSlot.meal)}.`,
+        type: "success",
+      });
+      setIsPickerOpen(false);
+      setActiveSlot(null);
+    } catch (error) {
+      console.error('Failed to add discover meal:', error);
+      toast.create({
+        title: "Error",
+        description: "Failed to add this recipe. Please try again.",
+        type: "error",
+      });
+    }
   };
 
   const openPicker = (day: DayOfWeek, meal: MealTime) => {
@@ -725,7 +729,7 @@ export default function MealPlanPage() {
               </>
             )}
 
-            {/* Discover Tab — TheMealDB recipes */}
+            {/* Discover Tab — Spoonacular recipes */}
             {pickerTab === 'discover' && (
               <>
                 {discoverLoading ? (
@@ -741,26 +745,26 @@ export default function MealPlanPage() {
                 ) : (
                   discoverMeals.map(meal => (
                     <div 
-                      key={meal.idMeal}
+                      key={meal.id}
                       onClick={() => handleSelectDiscoverMeal(meal)}
                       className="flex items-center gap-3 p-3 rounded-xl border border-stone-200/80 cursor-pointer transition-all hover:bg-orange-50/60 hover:border-orange-200 bg-white"
                     >
                       <div className="h-12 w-12 rounded-lg overflow-hidden shrink-0 border border-stone-200/60">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={meal.strMealThumb + '/preview'} alt={meal.strMeal} className="w-full h-full object-cover" />
+                        <img src={meal.image} alt={meal.title} className="w-full h-full object-cover" />
                       </div>
                       
                       <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-sm text-stone-900 truncate">{meal.strMeal}</div>
+                        <div className="font-semibold text-sm text-stone-900 truncate">{meal.title}</div>
                         <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                          {meal.strArea && (
+                          {'readyInMinutes' in meal && (
                             <Badge variant="outline" className="text-[10px] h-4 px-1.5 font-medium text-stone-600 border-stone-200">
-                              {meal.strArea}
+                              {(meal as SpoonacularRecipe).readyInMinutes} min
                             </Badge>
                           )}
-                          {meal.strCategory && (
+                          {'servings' in meal && (
                             <Badge variant="outline" className="text-[10px] h-4 px-1.5 font-medium text-orange-700 border-orange-200 bg-orange-50">
-                              {meal.strCategory}
+                              {(meal as SpoonacularRecipe).servings} servings
                             </Badge>
                           )}
                         </div>

@@ -43,7 +43,7 @@ export interface Recipe {
   id: string;
   name: string;
   description: string;
-  source: 'youtube' | 'image' | 'manual';
+  source: 'youtube' | 'image' | 'manual' | 'discover';
   sourceUrl?: string;
   thumbnailUrl?: string;
   prepTimeMinutes: number;
