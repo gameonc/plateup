@@ -152,7 +152,7 @@ function ExtractRecipeContent() {
   const [thumbnailUrl, setThumbnailUrl] = useState<string | undefined>(undefined);
 
   // Auto-extract when coming from landing page with a URL param
-  const handleExtractYoutubeRef = useRef<() => void>();
+  const handleExtractYoutubeRef = useRef<(() => void) | undefined>(undefined);
 
   useEffect(() => {
     if (urlParam && youtubeVideoId && !autoExtractDone && !isExtractingYoutube) {
